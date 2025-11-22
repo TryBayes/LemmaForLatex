@@ -1,3 +1,4 @@
+const Fs = require('node:fs')
 const Path = require('node:path')
 const { merge } = require('@overleaf/settings/merge')
 
@@ -76,6 +77,40 @@ const parseTextExtensions = function (extensions) {
   }
 }
 
+const parseJsonFromEnv = function (envVar) {
+  const raw = process.env[envVar]
+  if (!raw) {
+    return null
+  }
+  try {
+    return JSON.parse(raw)
+  } catch (err) {
+    throw new Error(`Invalid JSON for ${envVar}: ${err.message}`)
+  }
+}
+
+const parseJsonFile = function (filePath, label) {
+  try {
+    return JSON.parse(Fs.readFileSync(filePath, 'utf8'))
+  } catch (err) {
+    throw new Error(
+      `Unable to load ${label} JSON file (${filePath}): ${err.message}`
+    )
+  }
+}
+
+const loadOauthProviders = function () {
+  if (process.env.OVERLEAF_OAUTH_PROVIDERS_FILE) {
+    return (
+      parseJsonFile(
+        process.env.OVERLEAF_OAUTH_PROVIDERS_FILE,
+        'OAuth providers'
+      ) || {}
+    )
+  }
+  return parseJsonFromEnv('OVERLEAF_OAUTH_PROVIDERS_JSON') || {}
+}
+
 const httpPermissionsPolicy = {
   blocked: [
     'accelerometer',
@@ -121,6 +156,8 @@ const redisTls =
       }
     : undefined
 
+const oauthProviders = loadOauthProviders()
+
 module.exports = {
   env: 'server-ce',
 
@@ -131,6 +168,8 @@ module.exports = {
 
   allowAnonymousReadAndWriteSharing:
     process.env.OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING === 'true',
+
+  oauth: process.env.OVERLEAF_ENABLE_OAUTH === 'true',
 
   // Databases
   // ---------
@@ -807,6 +846,8 @@ module.exports = {
 
     header_extras: [],
   },
+
+  oauthProviders,
   // Example:
   //   header_extras: [{text: "Some Page", url: "http://example.com/some/page", class: "subdued"}]
 

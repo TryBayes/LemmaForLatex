@@ -147,6 +147,7 @@ services:
     volumes:
       - sharelatex-data:/var/lib/overleaf
       - web-data:/overleaf/services/web/data
+      - ../oauth-providers.json:/overleaf/oauth-providers.json:ro
     depends_on:
       - mongo
       - redis

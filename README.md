@@ -44,6 +44,10 @@ We have detailed installation instructions in the [Overleaf Toolkit](https://git
 
 If you are upgrading from a previous version of Overleaf, please see the [Release Notes section on the Wiki](https://github.com/overleaf/overleaf/wiki#release-notes) for all of the versions between your current version and the version you are upgrading to.
 
+## OAuth configuration
+
+Looking to enable OAuth logins or personal access tokens? Follow the step-by-step instructions in [`doc/oauth-setup.md`](doc/oauth-setup.md). The guide covers the new environment variables (`OVERLEAF_ENABLE_OAUTH`, `OVERLEAF_OAUTH_PROVIDERS_FILE` / `OVERLEAF_OAUTH_PROVIDERS_JSON`), registering OAuth clients via the included scripts, and any additional service-level tweaks you might need. Start from [`config/oauth-providers.example.json`](config/oauth-providers.example.json), copy it somewhere outside the repo, and swap in your own client IDs and secrets.
+
 ## Overleaf Docker Image
 
 This repo contains two dockerfiles, [`Dockerfile-base`](server-ce/Dockerfile-base), which builds the

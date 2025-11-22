@@ -1,0 +1,27 @@
+{
+  "google": {
+    "name": "Google",
+    "descriptionKey": "details_provided_by_google_explanation",
+    "descriptionOptions": {
+      "appName": "Lemma"
+    },
+    "linkPath": "/auth/google",
+    "clientID": "GOOGLE_CLIENT_ID",
+    "clientSecret": "GOOGLE_CLIENT_SECRET",
+    "callbackURL": "https://your-domain.example.com/auth/google/callback",
+    "scope": ["profile", "email"]
+  },
+  "orcid": {
+    "name": "ORCID",
+    "descriptionKey": "oauth_orcid_description",
+    "descriptionOptions": {
+      "appName": "Lemma",
+      "link": "https://orcid.org/signin"
+    },
+    "linkPath": "/auth/orcid",
+    "clientID": "ORCID_CLIENT_ID",
+    "clientSecret": "ORCID_CLIENT_SECRET",
+    "callbackURL": "https://your-domain.example.com/auth/orcid/callback",
+    "scope": ["/authenticate"]
+  }
+}
