@@ -5,6 +5,7 @@ import CobrandingLogo from './cobranding-logo'
 import BackToProjectsButton from './back-to-projects-button'
 import UpgradePrompt from './upgrade-prompt'
 import ChatToggleButton from './chat-toggle-button'
+import AiToggleButton from './ai-toggle-button'
 import LayoutDropdownButton from './layout-dropdown-button'
 import OnlineUsersWidget from './online-users-widget'
 import ProjectNameEditableLabel from './project-name-editable-label'
@@ -44,6 +45,8 @@ export type ToolbarHeaderProps = {
   onShowLeftMenuClick: () => void
   chatIsOpen: boolean
   toggleChatOpen: () => void
+  aiIsOpen: boolean
+  toggleAiOpen: () => void
   reviewPanelOpen: boolean
   toggleReviewPanelOpen: (e: React.MouseEvent) => void
   historyIsOpen: boolean
@@ -66,6 +69,8 @@ const ToolbarHeader = React.memo(function ToolbarHeader({
   onShowLeftMenuClick,
   chatIsOpen,
   toggleChatOpen,
+  aiIsOpen,
+  toggleAiOpen,
   reviewPanelOpen,
   toggleReviewPanelOpen,
   historyIsOpen,
@@ -151,6 +156,11 @@ const ToolbarHeader = React.memo(function ToolbarHeader({
                 unreadMessageCount={unreadMessageCount}
               />
             )}
+
+            <AiToggleButton
+              aiIsOpen={aiIsOpen}
+              onClick={toggleAiOpen}
+            />
           </>
         )}
       </div>
