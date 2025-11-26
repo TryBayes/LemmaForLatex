@@ -24,6 +24,13 @@ export default {
     }
 
     webRouter.get(
+      '/user/subscription/plans',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
+      SubscriptionController.plansPage
+    )
+
+    webRouter.get(
       '/user/subscription',
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),

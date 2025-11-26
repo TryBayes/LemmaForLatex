@@ -205,6 +205,18 @@ function _trimStaffAccess(user) {
   }
 }
 
+async function plansPage(req, res) {
+  const user = SessionManager.getSessionUser(req.session)
+  const plans = Settings.plans || []
+
+  res.render('subscriptions/plans-page', {
+    title: 'plans_and_pricing',
+    plans,
+    recurlySubdomain: Settings.apis.recurly?.subdomain || '',
+    user,
+  })
+}
+
 async function userSubscriptionPage(req, res) {
   const user = SessionManager.getSessionUser(req.session)
   await SplitTestHandler.promises.getAssignment(req, res, 'pause-subscription')
@@ -1176,6 +1188,7 @@ function makeChangePreview(
 }
 
 export default {
+  plansPage: expressify(plansPage),
   userSubscriptionPage: expressify(userSubscriptionPage),
   successfulSubscription: expressify(successfulSubscription),
   cancelSubscription,

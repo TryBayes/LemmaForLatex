@@ -312,7 +312,14 @@ module.exports = {
 
     // For legacy reasons, we need to populate the below objects.
     v1: {},
-    recurly: {},
+    recurly: process.env.RECURLY_API_KEY
+      ? {
+          apiKey: process.env.RECURLY_API_KEY,
+          subdomain: process.env.RECURLY_SUBDOMAIN,
+          webhookUser: process.env.RECURLY_WEBHOOK_USER,
+          webhookPass: process.env.RECURLY_WEBHOOK_PASS,
+        }
+      : {},
   },
 
   // Defines which features are allowed in the
@@ -440,15 +447,89 @@ module.exports = {
       planCode: 'personal',
       name: 'Personal',
       price_in_cents: 0,
-      features: defaultFeatures,
+      features: {
+        collaborators: 1,
+        dropbox: false,
+        versioning: false,
+        compileTimeout: 60,
+        compileGroup: 'standard',
+        trackChanges: false,
+        references: false,
+      },
+    },
+    {
+      planCode: 'collaborator',
+      name: 'Standard',
+      price_in_cents: 1500,
+      features: {
+        collaborators: 10,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+    {
+      planCode: 'collaborator-annual',
+      name: 'Standard Annual',
+      price_in_cents: 12900,
+      annual: true,
+      features: {
+        collaborators: 10,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+    {
+      planCode: 'professional',
+      name: 'Professional',
+      price_in_cents: 3000,
+      features: {
+        collaborators: -1,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+    {
+      planCode: 'professional-annual',
+      name: 'Professional Annual',
+      price_in_cents: 25900,
+      annual: true,
+      features: {
+        collaborators: -1,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
     },
   ],
 
   disableChat: process.env.OVERLEAF_DISABLE_CHAT === 'true',
   disableLinkSharing: process.env.OVERLEAF_DISABLE_LINK_SHARING === 'true',
-  enableSubscriptions: false,
+  enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
   restrictedCountries: [],
   enableOnboardingEmails: process.env.ENABLE_ONBOARDING_EMAILS === 'true',
+
+  // SaaS mode - enables subscription features in the UI
+  // Set ENABLE_SAAS=true to enable subscription pages and payment features
+  overleaf: process.env.ENABLE_SAAS === 'true'
+    ? {
+        host: process.env.PUBLIC_URL || 'http://127.0.0.1:3000',
+      }
+    : undefined,
 
   // Google OAuth Configuration
   oauthProviders: process.env.GOOGLE_CLIENT_ID
@@ -1083,6 +1164,8 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    // Conditionally add recurly-integration when subscriptions are enabled
+    ...(process.env.ENABLE_SUBSCRIPTIONS === 'true' ? ['recurly-integration'] : []),
   ],
   viewIncludes: {},
 

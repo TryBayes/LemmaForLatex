@@ -1,0 +1,45 @@
+extends ../layout-marketing
+
+block content
+  main.content.content-alt
+    .container(style="padding-top: 40px; padding-bottom: 40px;")
+      .row
+        .col-md-12
+          h1(style="text-align: center; margin-bottom: 40px;") Choose Your Plan
+
+      .row(style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;")
+        each plan in plans
+          if plan.price_in_cents > 0 && plan.features
+            .col-md-3(style="border: 1px solid #ddd; border-radius: 8px; padding: 24px; text-align: center; background-color: #fff; min-width: 250px;")
+              h3= plan.name
+              p(style="font-size: 24px; font-weight: bold; color: #138a07;")
+                if plan.annual
+                  | $#{plan.price_in_cents / 100}/year
+                else
+                  | $#{plan.price_in_cents / 100}/month
+              ul(style="text-align: left; list-style: none; padding: 0; margin-bottom: 20px;")
+                li
+                  | ✓ 
+                  if plan.features.collaborators === -1
+                    | Unlimited
+                  else
+                    | #{plan.features.collaborators}
+                  |  collaborators
+                if plan.features.trackChanges
+                  li ✓ Track changes
+                if plan.features.versioning
+                  li ✓ Full document history
+                if plan.features.dropbox
+                  li ✓ Dropbox sync
+                if plan.features.references
+                  li ✓ Reference search
+                li ✓ #{plan.features.compileTimeout}s compile timeout
+              a.btn.btn-primary(
+                href="https://" + recurlySubdomain + ".recurly.com/subscribe/" + plan.planCode + "?account_code=" + user._id
+                style="width: 100%;"
+              ) Subscribe
+
+      .row(style="margin-top: 40px;")
+        .col-md-12(style="text-align: center;")
+          p(style="color: #666;") You will be redirected to our secure payment provider (Recurly) to complete your subscription.
+          a(href="/user/subscription") ← Back to subscription dashboard
