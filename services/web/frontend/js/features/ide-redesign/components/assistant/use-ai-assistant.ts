@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useProjectContext } from '@/shared/context/project-context'
 import getMeta from '@/utils/meta'
 
@@ -31,8 +31,24 @@ interface ToolResultsPart {
 }
 
 interface StreamEvent {
-  type: 'text' | 'tool_results' | 'done' | 'error'
+  type: 'text' | 'tool_results' | 'done' | 'error' | 'conversation_id'
   data?: string | ToolResult[]
+}
+
+interface SavedMessage {
+  _id?: string
+  role: MessageRole
+  content: string
+  timestamp: string
+  toolResults?: ToolResult[]
+}
+
+export interface Conversation {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  messageCount: number
 }
 
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5'
@@ -43,7 +59,113 @@ export function useAiAssistant() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL)
+  const [messageCount, setMessageCount] = useState<number>(0)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const conversationsLoadedRef = useRef(false)
+
+  // Load conversations list on mount
+  useEffect(() => {
+    if (!projectId || conversationsLoadedRef.current) return
+
+    const loadConversations = async () => {
+      try {
+        const response = await fetch(`/project/${projectId}/ai-assistant/conversations`, {
+          credentials: 'same-origin',
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setConversations(data.conversations || [])
+        }
+        conversationsLoadedRef.current = true
+      } catch (err) {
+        console.error('[AI Assistant] Failed to load conversations:', err)
+        conversationsLoadedRef.current = true
+      }
+    }
+
+    loadConversations()
+  }, [projectId])
+
+  // Load message count on mount
+  useEffect(() => {
+    const loadMessageCount = async () => {
+      try {
+        const response = await fetch('/ai-assistant/message-count', {
+          credentials: 'same-origin',
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setMessageCount(data.totalMessages || 0)
+        }
+      } catch (err) {
+        console.error('[AI Assistant] Failed to load message count:', err)
+      }
+    }
+
+    loadMessageCount()
+  }, [])
+
+  // Load a specific conversation
+  const loadConversation = useCallback(async (conversationId: string) => {
+    if (!projectId) return
+
+    try {
+      const response = await fetch(`/project/${projectId}/ai-assistant/conversations/${conversationId}`, {
+        credentials: 'same-origin',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const loadedMessages: Message[] = data.messages.map((msg: SavedMessage, index: number) => ({
+          id: msg._id || `loaded-${index}`,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          toolResults: msg.toolResults,
+          parts: [{ type: 'text' as const, content: msg.content }],
+        }))
+        setMessages(loadedMessages)
+        setCurrentConversationId(conversationId)
+        setShowHistory(false)
+      }
+    } catch (err) {
+      console.error('[AI Assistant] Failed to load conversation:', err)
+    }
+  }, [projectId])
+
+  // Start a new conversation
+  const startNewConversation = useCallback(() => {
+    setMessages([])
+    setCurrentConversationId(null)
+    setError(null)
+    setShowHistory(false)
+  }, [])
+
+  // Delete a conversation
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    if (!projectId) return
+
+    try {
+      const response = await fetch(`/project/${projectId}/ai-assistant/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-Csrf-Token': getMeta('ol-csrfToken'),
+        },
+        credentials: 'same-origin',
+      })
+      if (response.ok) {
+        setConversations((prev: Conversation[]) => prev.filter((c: Conversation) => c.id !== conversationId))
+        // If we deleted the current conversation, start fresh
+        if (currentConversationId === conversationId) {
+          startNewConversation()
+        }
+      }
+    } catch (err) {
+      console.error('[AI Assistant] Failed to delete conversation:', err)
+    }
+  }, [projectId, currentConversationId, startNewConversation])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -57,7 +179,7 @@ export function useAiAssistant() {
         timestamp: new Date(),
       }
 
-      setMessages(prev => [...prev, userMessage])
+      setMessages((prev: Message[]) => [...prev, userMessage])
       setIsLoading(true)
       setError(null)
 
@@ -72,7 +194,7 @@ export function useAiAssistant() {
         parts: [{ type: 'text', content: '' }],
       }
 
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages((prev: Message[]) => [...prev, assistantMessage])
 
       // Abort any previous request
       if (abortControllerRef.current) {
@@ -87,7 +209,12 @@ export function useAiAssistant() {
           content: msg.content,
         }))
 
-        const response = await fetch(`/project/${projectId}/ai-assistant/chat`, {
+        // Use conversation-specific endpoint if we have an ID
+        const endpoint = currentConversationId
+          ? `/project/${projectId}/ai-assistant/conversations/${currentConversationId}/chat`
+          : `/project/${projectId}/ai-assistant/chat`
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -143,8 +270,8 @@ export function useAiAssistant() {
                       } else {
                         parts.push({ type: 'text', content: event.data })
                       }
-                      setMessages(prev =>
-                        prev.map(msg =>
+                      setMessages((prev: Message[]) =>
+                        prev.map((msg: Message) =>
                           msg.id === assistantMessageId
                             ? {
                                 ...msg,
@@ -172,8 +299,8 @@ export function useAiAssistant() {
                         type: 'tool_results',
                         results: event.data,
                       })
-                      setMessages(prev =>
-                        prev.map(msg =>
+                      setMessages((prev: Message[]) =>
+                        prev.map((msg: Message) =>
                           msg.id === assistantMessageId
                             ? {
                                 ...msg,
@@ -190,6 +317,21 @@ export function useAiAssistant() {
                     }
                     break
 
+                  case 'conversation_id':
+                    // New conversation was created, save the ID
+                    if (typeof event.data === 'string') {
+                      setCurrentConversationId(event.data)
+                      // Refresh conversations list
+                      const convResponse = await fetch(`/project/${projectId}/ai-assistant/conversations`, {
+                        credentials: 'same-origin',
+                      })
+                      if (convResponse.ok) {
+                        const convData = await convResponse.json()
+                        setConversations(convData.conversations || [])
+                      }
+                    }
+                    break
+
                   case 'error':
                     console.log('[AI Assistant Frontend] Error event:', event.data)
                     setError(
@@ -201,7 +343,8 @@ export function useAiAssistant() {
 
                   case 'done':
                     console.log('[AI Assistant Frontend] Done event received')
-                    // Stream complete
+                    // Stream complete - increment local message count
+                    setMessageCount((prev: number) => prev + 1)
                     break
                 }
               } catch (parseError) {
@@ -223,8 +366,8 @@ export function useAiAssistant() {
         setError(errorMessage)
 
         // Update assistant message with error
-        setMessages(prev =>
-          prev.map(msg =>
+        setMessages((prev: Message[]) =>
+          prev.map((msg: Message) =>
             msg.id === assistantMessageId
               ? { ...msg, content: `Error: ${errorMessage}` }
               : msg
@@ -234,13 +377,8 @@ export function useAiAssistant() {
         setIsLoading(false)
       }
     },
-    [projectId, messages, selectedModel]
+    [projectId, messages, selectedModel, currentConversationId]
   )
-
-  const clearMessages = useCallback(() => {
-    setMessages([])
-    setError(null)
-  }, [])
 
   const stopGeneration = useCallback(() => {
     if (abortControllerRef.current) {
@@ -254,9 +392,16 @@ export function useAiAssistant() {
     isLoading,
     error,
     sendMessage,
-    clearMessages,
     stopGeneration,
     selectedModel,
     setSelectedModel,
+    messageCount,
+    conversations,
+    currentConversationId,
+    loadConversation,
+    startNewConversation,
+    deleteConversation,
+    showHistory,
+    setShowHistory,
   }
 }

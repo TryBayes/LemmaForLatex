@@ -7,6 +7,8 @@ import ProjectEntityHandler from '../Project/ProjectEntityHandler.mjs'
 import DocumentUpdaterHandler from '../DocumentUpdater/DocumentUpdaterHandler.mjs'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
+import { AiConversation } from '../../models/AiConversation.mjs'
+import { AiMessageCount } from '../../models/AiMessageCount.mjs'
 
 // System prompt for the LaTeX assistant
 const SYSTEM_PROMPT = `You are an expert LaTeX assistant integrated into Lemma, a collaborative LaTeX editor. Your role is to help users with their LaTeX documents.
@@ -29,7 +31,7 @@ Always use the tools when the user asks about their document or wants to make ch
  * Stream chat completion with AI assistant
  */
 async function chat(req, res) {
-  const { project_id: projectId } = req.params
+  const { project_id: projectId, conversation_id: conversationId } = req.params
   const { messages, model } = req.body
   const userId = SessionManager.getLoggedInUserId(req.session)
 
@@ -98,6 +100,68 @@ async function chat(req, res) {
     }
 
     console.log('[AI Assistant] Stream complete. Total text:', totalText)
+
+    // Save conversation to database
+    try {
+      // Find the last user message from the request
+      const lastUserMessage = messages[messages.length - 1]
+      
+      // Generate title from first user message if this is a new conversation
+      const generateTitle = (content) => {
+        const maxLength = 50
+        const cleaned = content.replace(/\n/g, ' ').trim()
+        return cleaned.length > maxLength ? cleaned.substring(0, maxLength) + '...' : cleaned
+      }
+
+      if (conversationId) {
+        // Update existing conversation
+        await AiConversation.findByIdAndUpdate(
+          conversationId,
+          {
+            $push: {
+              messages: {
+                $each: [
+                  { role: 'user', content: lastUserMessage.content, timestamp: new Date() },
+                  { role: 'assistant', content: totalText, timestamp: new Date() },
+                ],
+              },
+            },
+            $set: { updatedAt: new Date() },
+          }
+        )
+      } else {
+        // Create new conversation
+        const newConversation = new AiConversation({
+          userId,
+          projectId,
+          title: generateTitle(lastUserMessage.content),
+          messages: [
+            { role: 'user', content: lastUserMessage.content, timestamp: new Date() },
+            { role: 'assistant', content: totalText, timestamp: new Date() },
+          ],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        await newConversation.save()
+        
+        // Send the new conversation ID to client
+        res.write(`data: ${JSON.stringify({ type: 'conversation_id', data: newConversation._id.toString() })}\n\n`)
+      }
+
+      // Increment user's message count
+      await AiMessageCount.findOneAndUpdate(
+        { userId },
+        {
+          $inc: { totalMessages: 1 },
+          $set: { lastMessageAt: new Date() },
+        },
+        { upsert: true }
+      )
+      console.log('[AI Assistant] Saved conversation and incremented message count')
+    } catch (saveError) {
+      logger.error({ err: saveError, projectId, userId }, 'Error saving AI conversation')
+      // Don't fail the request if saving fails
+    }
     
     // Send completion signal
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
@@ -344,9 +408,9 @@ function collectFiles(folder, basePath, results) {
 }
 
 /**
- * Get conversation history (placeholder for future persistence)
+ * List all conversations for a user in a project
  */
-async function getHistory(req, res) {
+async function listConversations(req, res) {
   const { project_id: projectId } = req.params
   const userId = SessionManager.getLoggedInUserId(req.session)
 
@@ -354,11 +418,117 @@ async function getHistory(req, res) {
     return res.status(401).json({ error: 'User not authenticated' })
   }
 
-  // For now, return empty history - can be extended to persist conversations
-  res.json({ messages: [] })
+  try {
+    const conversations = await AiConversation.find(
+      { userId, projectId },
+      { title: 1, createdAt: 1, updatedAt: 1, 'messages.0': 1 }
+    ).sort({ updatedAt: -1 })
+
+    res.json({
+      conversations: conversations.map(c => ({
+        id: c._id.toString(),
+        title: c.title,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        messageCount: c.messages?.length || 0,
+      })),
+    })
+  } catch (error) {
+    logger.error({ err: error, projectId, userId }, 'Error listing AI conversations')
+    res.status(500).json({ error: 'Failed to list conversations' })
+  }
+}
+
+/**
+ * Get a specific conversation
+ */
+async function getConversation(req, res) {
+  const { project_id: projectId, conversation_id: conversationId } = req.params
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User not authenticated' })
+  }
+
+  try {
+    const conversation = await AiConversation.findOne({
+      _id: conversationId,
+      userId,
+      projectId,
+    })
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' })
+    }
+
+    res.json({
+      id: conversation._id.toString(),
+      title: conversation.title,
+      messages: conversation.messages,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    })
+  } catch (error) {
+    logger.error({ err: error, projectId, conversationId, userId }, 'Error fetching AI conversation')
+    res.status(500).json({ error: 'Failed to fetch conversation' })
+  }
+}
+
+/**
+ * Delete a specific conversation
+ */
+async function deleteConversation(req, res) {
+  const { project_id: projectId, conversation_id: conversationId } = req.params
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User not authenticated' })
+  }
+
+  try {
+    const result = await AiConversation.findOneAndDelete({
+      _id: conversationId,
+      userId,
+      projectId,
+    })
+
+    if (!result) {
+      return res.status(404).json({ error: 'Conversation not found' })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    logger.error({ err: error, projectId, conversationId, userId }, 'Error deleting AI conversation')
+    res.status(500).json({ error: 'Failed to delete conversation' })
+  }
+}
+
+/**
+ * Get message count for the current user
+ */
+async function getMessageCount(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User not authenticated' })
+  }
+
+  try {
+    const countDoc = await AiMessageCount.findOne({ userId })
+    res.json({
+      totalMessages: countDoc?.totalMessages || 0,
+      lastMessageAt: countDoc?.lastMessageAt || null,
+    })
+  } catch (error) {
+    logger.error({ err: error, userId }, 'Error fetching AI message count')
+    res.status(500).json({ error: 'Failed to fetch message count' })
+  }
 }
 
 export default {
   chat,
-  getHistory,
+  listConversations,
+  getConversation,
+  deleteConversation,
+  getMessageCount,
 }

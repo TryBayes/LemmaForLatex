@@ -7,14 +7,30 @@ import {
   Message,
   ToolResult,
   MessagePart,
+  Conversation,
 } from './use-ai-assistant'
 import ReactMarkdown from 'react-markdown'
 
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
 
 export const AssistantPane = () => {
-  const { messages, isLoading, error, sendMessage, stopGeneration, setSelectedModel, selectedModel } =
-    useAiAssistant()
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    stopGeneration,
+    setSelectedModel,
+    selectedModel,
+    messageCount,
+    conversations,
+    currentConversationId,
+    loadConversation,
+    startNewConversation,
+    deleteConversation,
+    showHistory,
+    setShowHistory,
+  } = useAiAssistant()
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -40,48 +56,180 @@ export const AssistantPane = () => {
     }
   }
 
-  const shouldDisplayPlaceholder = messages.length === 0 && !isLoading
+  const shouldDisplayPlaceholder = messages.length === 0 && !isLoading && !showHistory
 
   return (
     <div className="assistant-panel">
       <div className="assistant-wrapper">
         <aside className="assistant" aria-label="AI assistant">
-          <div className="assistant-messages">
-            <div
-              className={classNames({ 'h-100': shouldDisplayPlaceholder })}
-            >
-              <h2 className="visually-hidden">AI assistant</h2>
-              {isLoading && messages.length === 0 && <Loading />}
-              {shouldDisplayPlaceholder && <Placeholder />}
-              <MessageList messages={messages} />
-              {isLoading && messages.length > 0 && (
-                <div className="assistant-typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              )}
-              {error && (
-                <div className="assistant-error">
-                  <MaterialIcon type="error" />
-                  <span>{error}</span>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
+          <div className="assistant-header">
+            <div className="assistant-header-left">
+              <MaterialIcon type="smart_toy" />
+              <span className="assistant-header-title">AI Assistant</span>
+            </div>
+            <div className="assistant-header-right">
+              <button
+                type="button"
+                className="assistant-header-button"
+                onClick={startNewConversation}
+                title="New chat"
+              >
+                <MaterialIcon type="add" />
+              </button>
+              <button
+                type="button"
+                className={classNames('assistant-header-button', {
+                  'assistant-header-button-active': showHistory,
+                })}
+                onClick={() => setShowHistory(!showHistory)}
+                title="Chat history"
+              >
+                <MaterialIcon type="history" />
+              </button>
             </div>
           </div>
-          <AssistantInput
-            value={inputValue}
-            onChange={setInputValue}
-            onKeyDown={handleKeyDown}
-            onSend={() => handleSendMessage(inputValue)}
-            onStop={stopGeneration}
-            isLoading={isLoading}
-            selectedModel={selectedModel}
-            onModelChange={setSelectedModel}
-          />
+
+          {showHistory ? (
+            <HistoryPanel
+              conversations={conversations}
+              currentConversationId={currentConversationId}
+              onSelectConversation={loadConversation}
+              onDeleteConversation={deleteConversation}
+              onNewChat={startNewConversation}
+              messageCount={messageCount}
+            />
+          ) : (
+            <>
+              <div className="assistant-messages">
+                <div
+                  className={classNames({ 'h-100': shouldDisplayPlaceholder })}
+                >
+                  <h2 className="visually-hidden">AI assistant</h2>
+                  {isLoading && messages.length === 0 && <Loading />}
+                  {shouldDisplayPlaceholder && <Placeholder />}
+                  <MessageList messages={messages} />
+                  {isLoading && messages.length > 0 && (
+                    <div className="assistant-typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  )}
+                  {error && (
+                    <div className="assistant-error">
+                      <MaterialIcon type="error" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+              <AssistantInput
+                value={inputValue}
+                onChange={setInputValue}
+                onKeyDown={handleKeyDown}
+                onSend={() => handleSendMessage(inputValue)}
+                onStop={stopGeneration}
+                isLoading={isLoading}
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+              />
+            </>
+          )}
         </aside>
       </div>
+    </div>
+  )
+}
+
+function HistoryPanel({
+  conversations,
+  currentConversationId,
+  onSelectConversation,
+  onDeleteConversation,
+  onNewChat,
+  messageCount,
+}: {
+  conversations: Conversation[]
+  currentConversationId: string | null
+  onSelectConversation: (id: string) => void
+  onDeleteConversation: (id: string) => void
+  onNewChat: () => void
+  messageCount: number
+}) {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      return 'Today'
+    } else if (diffDays === 1) {
+      return 'Yesterday'
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  return (
+    <div className="assistant-history">
+      <div className="assistant-history-header">
+        <span className="assistant-history-title">Chat History</span>
+        <span className="assistant-history-count">{messageCount} total messages</span>
+      </div>
+      
+      <button
+        type="button"
+        className="assistant-history-new-chat"
+        onClick={onNewChat}
+      >
+        <MaterialIcon type="add" />
+        <span>New Chat</span>
+      </button>
+
+      {conversations.length === 0 ? (
+        <div className="assistant-history-empty">
+          <MaterialIcon type="chat_bubble_outline" />
+          <p>No conversations yet</p>
+          <span>Start a new chat to begin</span>
+        </div>
+      ) : (
+        <ul className="assistant-history-list">
+          {conversations.map(conversation => (
+            <li
+              key={conversation.id}
+              className={classNames('assistant-history-item', {
+                'assistant-history-item-active': conversation.id === currentConversationId,
+              })}
+            >
+              <button
+                type="button"
+                className="assistant-history-item-content"
+                onClick={() => onSelectConversation(conversation.id)}
+              >
+                <span className="assistant-history-item-title">{conversation.title}</span>
+                <span className="assistant-history-item-date">
+                  {formatDate(conversation.updatedAt)}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="assistant-history-item-delete"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDeleteConversation(conversation.id)
+                }}
+                title="Delete conversation"
+              >
+                <MaterialIcon type="delete_outline" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
