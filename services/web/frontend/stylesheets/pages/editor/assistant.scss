@@ -87,7 +87,8 @@
       align-items: flex-end;
 
       .assistant-message-content {
-        background-color: var(--assistant-message-user-bg);
+        background-color: #007AFF;
+        color: #fff;
         border-radius: var(--border-radius-large);
         border-bottom-right-radius: var(--border-radius-base);
       }
