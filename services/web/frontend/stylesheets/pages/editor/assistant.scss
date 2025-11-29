@@ -126,31 +126,32 @@
       display: flex;
       gap: var(--spacing-02);
       align-items: flex-end;
+      position: relative;
     }
 
     .assistant-textarea-wrapper {
       flex: 1;
       position: relative;
-      background: linear-gradient(
-        135deg,
-        var(--assistant-input-textarea-bg) 0%,
-        color-mix(in srgb, var(--assistant-input-textarea-bg) 95%, var(--bg-accent-01) 5%) 100%
-      );
-      border-radius: 16px;
+      background-color: var(--assistant-input-textarea-bg);
+      border-radius: 24px;
       border: 1px solid var(--assistant-input-textarea-border);
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      padding: 6px;
 
       &:focus-within {
         border-color: var(--bg-accent-01);
-        box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--bg-accent-01);
+        transform: translateY(-1px);
       }
     }
 
     textarea {
       width: 100%;
-      min-height: 44px;
-      max-height: 120px;
+      min-height: 40px;
+      max-height: 200px;
       overflow-y: auto;
       resize: none;
       border: none;
@@ -158,12 +159,14 @@
       color: var(--assistant-input-textarea-color);
       font-size: var(--font-size-02);
       line-height: 1.5;
-      padding: 12px 16px;
+      padding: 10px 48px 10px 16px; // Right padding for button
       background: transparent;
 
       &::placeholder {
         color: var(--content-secondary-themed);
-        opacity: 0.7;
+        opacity: 0.6;
+        text-align: left;
+        direction: ltr;
       }
 
       &:focus {
@@ -177,50 +180,59 @@
     }
 
     .assistant-send-button {
+      position: absolute;
+      bottom: 10px; // Centered relative to 40px input + padding
+      right: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
-      background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
+      width: 32px;
+      height: 32px;
+      background-color: var(--bg-accent-01);
       border: none;
-      border-radius: 12px;
+      border-radius: 50%;
       color: var(--white);
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
-      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      z-index: 2;
 
       &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #5a9ee3 0%, #4188c9 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+        background-color: var(--bg-accent-01); // Keep the same base color
+        filter: brightness(1.1); // Brighten it slightly instead of changing variable
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        color: var(--white); // Ensure icon stays white
       }
 
       &:active:not(:disabled) {
-        transform: translateY(0);
-        box-shadow: 0 2px 6px rgba(74, 144, 217, 0.3);
+        transform: scale(0.95);
       }
 
       &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        transform: none;
+        background-color: var(--neutral-30);
+        color: var(--neutral-50);
+        cursor: default;
         box-shadow: none;
       }
 
       .material-symbols {
-        font-size: 20px;
+        font-size: 18px;
       }
     }
 
     .assistant-stop-button {
-      background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%) !important;
-      box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
-
+      background-color: var(--content-primary) !important; // Black/Dark stop button is cleaner
+      color: var(--bg-primary) !important;
+      
       &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%) !important;
-        box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+        background-color: var(--content-primary-dark) !important;
+        opacity: 0.9;
+      }
+      
+      .material-symbols {
+        font-size: 16px;
+        border-radius: 2px;
       }
     }
   }
@@ -231,42 +243,45 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-02);
+  padding: 0 4px;
 
   .assistant-model-label {
-    font-size: 11px;
-    color: var(--content-secondary-themed);
+    font-size: 10px;
+    color: var(--content-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .assistant-model-select {
     appearance: none;
-    background-color: var(--bg-dark-secondary);
-    border: 1px solid var(--assistant-input-textarea-border);
-    border-radius: 8px;
-    padding: 6px 28px 6px 10px;
-    font-size: var(--font-size-01);
-    color: var(--content-primary-themed);
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 20px 4px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--content-secondary-themed);
     cursor: pointer;
     transition: all 0.2s ease;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 8px center;
+    background-position: right 4px center;
 
     &:hover {
-      border-color: var(--bg-accent-01);
+      background-color: var(--bg-accent-03);
+      color: var(--content-primary-themed); // Ensure this contrasts with bg-accent-03
     }
 
     &:focus {
       outline: none;
-      border-color: var(--bg-accent-01);
-      box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+      background-color: var(--bg-accent-03);
     }
 
     option {
-      background-color: var(--bg-dark-primary);
-      color: var(--content-primary-themed);
+      background-color: var(--bg-primary);
+      color: var(--content-primary);
+      padding: 4px;
     }
   }
 }

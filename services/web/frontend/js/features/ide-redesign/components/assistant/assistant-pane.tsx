@@ -1,6 +1,6 @@
 import { FullSizeLoadingSpinner } from '@/shared/components/loading-spinner'
 import MaterialIcon from '@/shared/components/material-icon'
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import classNames from 'classnames'
 import {
   useAiAssistant,
@@ -235,32 +235,38 @@ function AssistantInput({
             id="assistant-input"
             placeholder="Ask AI assistant..."
             value={value}
-            onChange={e => onChange(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              onChange(e.target.value)
+              // Auto-resize textarea
+              e.target.style.height = 'auto'
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
+            }}
             onKeyDown={onKeyDown}
             disabled={isLoading}
             rows={1}
+            style={{ height: 'auto' }}
           />
+          {isLoading ? (
+            <button
+              type="button"
+              className="assistant-send-button assistant-stop-button"
+              onClick={onStop}
+              aria-label="Stop"
+            >
+              <MaterialIcon type="stop" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="assistant-send-button"
+              onClick={onSend}
+              disabled={!value.trim()}
+              aria-label="Send"
+            >
+              <MaterialIcon type="arrow_upward" />
+            </button>
+          )}
         </div>
-        {isLoading ? (
-          <button
-            type="button"
-            className="assistant-send-button assistant-stop-button"
-            onClick={onStop}
-            aria-label="Stop"
-          >
-            <MaterialIcon type="stop" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="assistant-send-button"
-            onClick={onSend}
-            disabled={!value.trim()}
-            aria-label="Send"
-          >
-            <MaterialIcon type="send" />
-          </button>
-        )}
       </div>
     </form>
   )
