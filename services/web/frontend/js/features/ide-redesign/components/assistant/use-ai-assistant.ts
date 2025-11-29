@@ -265,8 +265,6 @@ export function useAiAssistant() {
           throw new Error('No response body')
         }
 
-        console.log('[AI Assistant Frontend] Starting to read stream...')
-
         const decoder = new TextDecoder()
         let accumulatedContent = ''
         let accumulatedToolResults: ToolResult[] = []
@@ -274,26 +272,20 @@ export function useAiAssistant() {
 
         while (true) {
           const { done, value } = await reader.read()
-          console.log('[AI Assistant Frontend] Read chunk, done:', done, 'value length:', value?.length)
           if (done) break
 
           const chunk = decoder.decode(value, { stream: true })
-          console.log('[AI Assistant Frontend] Decoded chunk:', chunk)
           const lines = chunk.split('\n')
 
           for (const line of lines) {
-            console.log('[AI Assistant Frontend] Processing line:', line)
             if (line.startsWith('data: ')) {
               try {
                 const event: StreamEvent = JSON.parse(line.slice(6))
-                console.log('[AI Assistant Frontend] Parsed event:', event)
 
                 switch (event.type) {
                   case 'text':
-                    console.log('[AI Assistant Frontend] Text event data:', event.data)
                     if (typeof event.data === 'string') {
                       accumulatedContent += event.data
-                      console.log('[AI Assistant Frontend] Accumulated content:', accumulatedContent)
                       // append to the latest text part or create one
                       const lastPart = parts[parts.length - 1]
                       if (lastPart && lastPart.type === 'text') {
@@ -320,7 +312,6 @@ export function useAiAssistant() {
                     break
 
                   case 'tool_results':
-                    console.log('[AI Assistant Frontend] Tool results:', event.data)
                     if (Array.isArray(event.data)) {
                       accumulatedToolResults = [
                         ...accumulatedToolResults,
@@ -364,7 +355,6 @@ export function useAiAssistant() {
                     break
 
                   case 'error':
-                    console.log('[AI Assistant Frontend] Error event:', event.data)
                     setError(
                       typeof event.data === 'string'
                         ? event.data
@@ -373,7 +363,6 @@ export function useAiAssistant() {
                     break
 
                   case 'done':
-                    console.log('[AI Assistant Frontend] Done event received')
                     // Stream complete - increment local message count
                     setMessageCount((prev: number) => prev + 1)
                     // Decrement remaining for free users
@@ -383,13 +372,11 @@ export function useAiAssistant() {
                     break
                 }
               } catch (parseError) {
-                console.log('[AI Assistant Frontend] Parse error for line:', line, parseError)
                 // Ignore parsing errors for incomplete chunks
               }
             }
           }
         }
-        console.log('[AI Assistant Frontend] Stream reading complete. Final content:', accumulatedContent)
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           // Request was aborted, ignore

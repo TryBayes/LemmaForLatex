@@ -115,8 +115,6 @@ async function chat(req, res) {
 
     // Use model from request or fall back to settings/default
     const selectedModel = model || Settings.ai?.model || 'anthropic/claude-sonnet-4-5'
-    console.log('[AI Assistant] Starting streamText with model:', selectedModel)
-    console.log('[AI Assistant] Messages:', JSON.stringify(messages, null, 2))
 
     // Track parts in order for saving to database
     let allToolResults = []
@@ -132,7 +130,6 @@ async function chat(req, res) {
       // Allow multiple LLM-tool rounds so the model can respond after tool calls
       stopWhen: stepCountIs(6),
       onStepFinish: async ({ toolResults }) => {
-        console.log('[AI Assistant] Step finished, toolResults:', toolResults)
         if (toolResults && toolResults.length > 0) {
           // Save current text part if it has content
           if (currentTextPart.content.trim()) {
@@ -149,14 +146,11 @@ async function chat(req, res) {
           messageParts.push({ type: 'tool_results', results: toolResultsForDb })
           
           const sseData = `data: ${JSON.stringify({ type: 'tool_results', data: toolResults })}\n\n`
-          console.log('[AI Assistant] Sending tool_results SSE:', sseData)
           res.write(sseData)
         }
       },
     })
 
-    console.log('[AI Assistant] Starting to stream text...')
-    
     // Stream text deltas to client
     let totalText = ''
     for await (const chunk of result.textStream) {
@@ -164,7 +158,6 @@ async function chat(req, res) {
         totalText += chunk
         currentTextPart.content += chunk
         const sseData = `data: ${JSON.stringify({ type: 'text', data: chunk })}\n\n`
-        console.log('[AI Assistant] Sending text chunk:', chunk)
         res.write(sseData)
       }
     }
@@ -173,9 +166,6 @@ async function chat(req, res) {
     if (currentTextPart.content.trim()) {
       messageParts.push({ ...currentTextPart })
     }
-
-    console.log('[AI Assistant] Stream complete. Total text:', totalText)
-    console.log('[AI Assistant] Parts collected:', messageParts.length)
 
     // Save conversation to database
     try {
@@ -226,7 +216,6 @@ async function chat(req, res) {
 
       // Increment user's message count (both total and weekly)
       await AiMessageCount.incrementWeeklyCount(userId)
-      console.log('[AI Assistant] Saved conversation and incremented message count')
     } catch (saveError) {
       logger.error({ err: saveError, projectId, userId }, 'Error saving AI conversation')
       // Don't fail the request if saving fails
@@ -234,7 +223,6 @@ async function chat(req, res) {
     
     // Send completion signal
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
-    console.log('[AI Assistant] Sent done signal')
     res.end()
   } catch (error) {
     logger.error({ err: error, projectId }, 'AI Assistant chat error')
@@ -264,7 +252,6 @@ function createProjectTools(projectId, userId) {
       }),
       execute: async ({ folder }) => {
         try {
-          console.log('[AI Assistant] list_files called with folder:', folder)
           const project = await ProjectGetter.promises.getProject(projectId, {
             rootFolder: true,
           })
@@ -285,7 +272,6 @@ function createProjectTools(projectId, userId) {
               name: f.name,
             })),
           }
-          console.log('[AI Assistant] list_files result:', result)
           return result
         } catch (error) {
           logger.error({ err: error, projectId }, 'Error listing files')
@@ -302,7 +288,6 @@ function createProjectTools(projectId, userId) {
       }),
       execute: async ({ path }) => {
         try {
-          console.log('[AI Assistant] read_file called with path:', path)
           const project = await ProjectGetter.promises.getProject(projectId, {
             rootFolder: true,
           })
@@ -339,7 +324,6 @@ function createProjectTools(projectId, userId) {
             content: lines.join('\n'),
             lineCount: lines.length,
           }
-          console.log('[AI Assistant] read_file result for', path, '- lines:', lines.length)
           return result
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error reading file')
@@ -358,7 +342,6 @@ function createProjectTools(projectId, userId) {
       }),
       execute: async ({ path, old_content, new_content }) => {
         try {
-          console.log('[AI Assistant] edit_file called with path:', path)
           const project = await ProjectGetter.promises.getProject(projectId, {
             rootFolder: true,
           })
@@ -422,7 +405,6 @@ function createProjectTools(projectId, userId) {
             message: 'File updated successfully',
             linesChanged: Math.abs(newLines.length - lines.length),
           }
-          console.log('[AI Assistant] edit_file result:', result)
           return result
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error editing file')
