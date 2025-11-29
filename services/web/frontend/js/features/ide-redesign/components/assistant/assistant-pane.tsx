@@ -3,7 +3,6 @@ import MaterialIcon from '@/shared/components/material-icon'
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
-import RailPanelHeader from '../rail/rail-panel-header'
 import {
   useAiAssistant,
   Message,
@@ -47,7 +46,6 @@ export const AssistantPane = () => {
 
   return (
     <div className="assistant-panel">
-      <RailPanelHeader title={t('ai_assistant')} />
       <div className="assistant-wrapper">
         <aside className="assistant" aria-label={t('ai_assistant')}>
           <div className="assistant-messages">
