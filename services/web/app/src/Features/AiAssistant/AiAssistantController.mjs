@@ -4,7 +4,9 @@ import SessionManager from '../Authentication/SessionManager.mjs'
 import ProjectGetter from '../Project/ProjectGetter.mjs'
 import ProjectLocator from '../Project/ProjectLocator.mjs'
 import ProjectEntityHandler from '../Project/ProjectEntityHandler.mjs'
+import ProjectEntityUpdateHandler from '../Project/ProjectEntityUpdateHandler.mjs'
 import DocumentUpdaterHandler from '../DocumentUpdater/DocumentUpdaterHandler.mjs'
+import EditorRealTimeController from '../Editor/EditorRealTimeController.mjs'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import { AiConversation } from '../../models/AiConversation.mjs'
@@ -62,12 +64,13 @@ const SYSTEM_PROMPT = `You are Lemma, an expert LaTeX assistant built into a col
 </identity>
 
 <tools>
-You have four tools:
+You have five tools:
 
 1. **list_files** - List all files/folders in the project
 2. **read_file** - Read the content of any document file (.tex, .bib, .sty, etc.)
 3. **edit_file** - Replace specific content in a file
-4. **get_compile_errors** - Compile the project and get errors, warnings, and log output
+4. **create_file** - Create a new file in the project (or overwrite an existing one)
+5. **get_compile_errors** - Compile the project and get errors, warnings, and log output
 
 ### Smart Tool Usage
 
@@ -85,6 +88,11 @@ You have four tools:
 **When to use edit_file:**
 - Match the EXACT text including whitespace and line breaks
 - If an edit fails, re-read the file and try again
+
+**When to use create_file:**
+- To create new .tex, .bib, .sty, or other text-based files
+- Parent folders are created automatically if they don't exist
+- Will overwrite existing file if one exists at that path, so check first if needed
 
 **When to use get_compile_errors (IMPORTANT):**
 - Run this after making edits to verify they compile correctly
@@ -473,6 +481,103 @@ function createProjectTools(projectId, userId) {
           return result
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error editing file')
+          return { error: error.message }
+        }
+      },
+    }),
+
+    create_file: tool({
+      description:
+        'Create a new file in the project with the specified content. Parent folders will be created automatically if they do not exist. If a file already exists at the path, it will be overwritten.',
+      inputSchema: z.object({
+        path: z.string().describe('The file path relative to project root, e.g., "chapters/intro.tex" or "references.bib"'),
+        content: z.string().describe('The content to write to the file'),
+      }),
+      execute: async ({ path, content }) => {
+        try {
+          // Normalize path - remove leading slash if present
+          const normalizedPath = path.startsWith('/') ? path.slice(1) : path
+
+          // Split content into lines for the document
+          const docLines = content.split('\n')
+
+          // Check if this is a root-level file (no directory component)
+          const isRootFile = !normalizedPath.includes('/')
+
+          let doc, isNew, newFolders = [], folderId
+
+          if (isRootFile) {
+            // For root-level files, get the project and use upsertDoc with root folder
+            const project = await ProjectGetter.promises.getProject(projectId, {
+              rootFolder: true,
+            })
+            if (!project) {
+              return { error: 'Project not found' }
+            }
+            folderId = project.rootFolder[0]._id
+            const result = await ProjectEntityUpdateHandler.promises.upsertDoc(
+              projectId,
+              folderId,
+              normalizedPath,
+              docLines,
+              'ai-assistant',
+              userId
+            )
+            doc = result.doc
+            isNew = result.isNew
+          } else {
+            // For files in subdirectories, use upsertDocWithPath which creates folders
+            const result = await ProjectEntityUpdateHandler.promises.upsertDocWithPath(
+              projectId,
+              normalizedPath,
+              docLines,
+              'ai-assistant',
+              userId
+            )
+            doc = result.doc
+            isNew = result.isNew
+            newFolders = result.newFolders || []
+            folderId = result.folder?._id
+          }
+
+          // Emit real-time events so the UI updates without refresh
+          // First emit any new folders that were created
+          for (const folder of newFolders) {
+            EditorRealTimeController.emitToRoom(
+              projectId,
+              'reciveNewFolder',
+              folder.parentFolder_id,
+              folder,
+              userId
+            )
+          }
+
+          // Then emit the new document event if it was newly created
+          if (isNew) {
+            EditorRealTimeController.emitToRoom(
+              projectId,
+              'reciveNewDoc',
+              folderId,
+              doc,
+              'ai-assistant',
+              userId
+            )
+          }
+
+          const resultObj = {
+            success: true,
+            path: normalizedPath,
+            docId: doc._id.toString(),
+            isNew,
+            foldersCreated: newFolders.length,
+            lineCount: docLines.length,
+            message: isNew 
+              ? `File "${normalizedPath}" created successfully` 
+              : `File "${normalizedPath}" updated successfully`,
+          }
+          return resultObj
+        } catch (error) {
+          logger.error({ err: error, projectId, path }, 'Error creating file')
           return { error: error.message }
         }
       },

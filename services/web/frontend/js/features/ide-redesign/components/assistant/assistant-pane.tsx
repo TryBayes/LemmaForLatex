@@ -338,9 +338,11 @@ function getToolIcon(toolName: string): string {
     list_files: 'folder_open',
     read_file: 'description',
     edit_file: 'edit_document',
+    create_file: 'note_add',
     write_file: 'note_add',
     search: 'search',
     run_command: 'terminal',
+    get_compile_errors: 'build',
   }
   return iconMap[toolName] || 'build'
 }
