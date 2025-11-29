@@ -9,7 +9,7 @@ This repo has **two separate docker-compose setups** for different purposes.
 - **Monolithic**: Single `sharelatex/sharelatex:main` container with all services bundled
 - **Custom build**: Built from local source code with Lemma customizations
 - **Production-ready**: Includes nginx-proxy + Let's Encrypt SSL
-- **Public-facing**: Configured for `projectcobrix.com`
+- **Public-facing**: Configured for `lemmaforlatex.com`
 
 ### `/develop/docker-compose.yml` — Development
 

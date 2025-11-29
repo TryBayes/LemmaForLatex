@@ -45,11 +45,11 @@ services:
             EMAIL_CONFIRMATION_DISABLED: 'true'
 
             ## Set for SSL via nginx-proxy
-            VIRTUAL_HOST: projectcobrix.com,ec2-3-229-134-93.compute-1.amazonaws.com,3.229.134.93,localhost
-            LETSENCRYPT_HOST: projectcobrix.com
+            VIRTUAL_HOST: lemmaforlatex.com,ec2-3-229-134-93.compute-1.amazonaws.com,3.229.134.93,localhost
+            LETSENCRYPT_HOST: lemmaforlatex.com
             LETSENCRYPT_EMAIL: founders@lemmaforlatex.com
 
-            OVERLEAF_SITE_URL: https://projectcobrix.com
+            OVERLEAF_SITE_URL: https://lemmaforlatex.com
             OVERLEAF_NAV_TITLE: Lemma
             # OVERLEAF_HEADER_IMAGE_URL: http://example.com/mylogo.png
             OVERLEAF_ADMIN_EMAIL: founders@lemmaforlatex.com
