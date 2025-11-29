@@ -4,21 +4,16 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import RailPanelHeader from '../rail/rail-panel-header'
-
-type Message = {
-  id: string
-  content: string
-  role: 'user' | 'assistant'
-  timestamp: Date
-}
+import { useAiAssistant, Message, ToolResult } from './use-ai-assistant'
+import ReactMarkdown from 'react-markdown'
 
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
 
 export const AssistantPane = () => {
   const { t } = useTranslation()
-  const [messages, setMessages] = useState<Message[]>([])
+  const { messages, isLoading, error, sendMessage, stopGeneration } =
+    useAiAssistant()
   const [inputValue, setInputValue] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -30,31 +25,9 @@ export const AssistantPane = () => {
   }, [messages])
 
   const handleSendMessage = (messageText: string) => {
-    if (!messageText.trim()) return
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      content: messageText.trim(),
-      role: 'user',
-      timestamp: new Date(),
-    }
-
-    setMessages(prev => [...prev, userMessage])
+    if (!messageText.trim() || isLoading) return
+    sendMessage(messageText)
     setInputValue('')
-    setIsLoading(true)
-
-    // Simulate AI response (placeholder for actual API integration)
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        content:
-          "I'm your AI assistant. I can help you with your LaTeX documents. This is a placeholder response - API integration coming soon!",
-        role: 'assistant',
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 1000)
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -80,6 +53,19 @@ export const AssistantPane = () => {
               {isLoading && messages.length === 0 && <Loading />}
               {shouldDisplayPlaceholder && <Placeholder />}
               <MessageList messages={messages} />
+              {isLoading && messages.length > 0 && (
+                <div className="assistant-typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              )}
+              {error && (
+                <div className="assistant-error">
+                  <MaterialIcon type="error" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -88,6 +74,7 @@ export const AssistantPane = () => {
             onChange={setInputValue}
             onKeyDown={handleKeyDown}
             onSend={() => handleSendMessage(inputValue)}
+            onStop={stopGeneration}
             isLoading={isLoading}
           />
         </aside>
@@ -108,12 +95,61 @@ function MessageList({ messages }: { messages: Message[] }) {
           })}
         >
           <div className="assistant-message-content">
-            {message.content}
+            {message.role === 'assistant' ? (
+              <ReactMarkdown>{message.content || '...'}</ReactMarkdown>
+            ) : (
+              message.content
+            )}
           </div>
+          {message.toolResults && message.toolResults.length > 0 && (
+            <ToolResultsDisplay results={message.toolResults} />
+          )}
         </li>
       ))}
     </ul>
   )
+}
+
+function ToolResultsDisplay({ results }: { results: ToolResult[] }) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (results.length === 0) return null
+
+  return (
+    <div className="assistant-tool-results">
+      <button
+        className="assistant-tool-toggle"
+        onClick={() => setExpanded(!expanded)}
+        type="button"
+      >
+        <MaterialIcon type={expanded ? 'expand_less' : 'expand_more'} />
+        <span>
+          {results.length} tool {results.length === 1 ? 'call' : 'calls'}
+        </span>
+      </button>
+      {expanded && (
+        <div className="assistant-tool-results-list">
+          {results.map((result, index) => (
+            <div key={index} className="assistant-tool-result">
+              <div className="assistant-tool-name">
+                <MaterialIcon type="build" />
+                {formatToolName(result.toolName)}
+              </div>
+              <pre className="assistant-tool-output">
+                {JSON.stringify(result.result, null, 2)}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function formatToolName(name: string): string {
+  return name
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function AssistantInput({
@@ -121,12 +157,14 @@ function AssistantInput({
   onChange,
   onKeyDown,
   onSend,
+  onStop,
   isLoading,
 }: {
   value: string
   onChange: (value: string) => void
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
   onSend: () => void
+  onStop: () => void
   isLoading: boolean
 }) {
   const { t } = useTranslation()
@@ -144,15 +182,26 @@ function AssistantInput({
         onKeyDown={onKeyDown}
         disabled={isLoading}
       />
-      <button
-        type="button"
-        className="assistant-send-button"
-        onClick={onSend}
-        disabled={isLoading || !value.trim()}
-        aria-label={t('send')}
-      >
-        <MaterialIcon type="send" />
-      </button>
+      {isLoading ? (
+        <button
+          type="button"
+          className="assistant-send-button assistant-stop-button"
+          onClick={onStop}
+          aria-label={t('stop')}
+        >
+          <MaterialIcon type="stop" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="assistant-send-button"
+          onClick={onSend}
+          disabled={!value.trim()}
+          aria-label={t('send')}
+        >
+          <MaterialIcon type="send" />
+        </button>
+      )}
     </form>
   )
 }
@@ -179,4 +228,3 @@ function Placeholder() {
 }
 
 export default AssistantPane
-

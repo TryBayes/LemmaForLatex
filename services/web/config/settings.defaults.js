@@ -446,6 +446,14 @@ module.exports = {
 
   disableChat: process.env.OVERLEAF_DISABLE_CHAT === 'true',
   disableLinkSharing: process.env.OVERLEAF_DISABLE_LINK_SHARING === 'true',
+
+  // AI Assistant Configuration
+  ai: process.env.AI_GATEWAY_API_KEY
+    ? {
+        model: process.env.AI_MODEL || 'openai/gpt-5-mini',
+        apiKey: process.env.AI_GATEWAY_API_KEY,
+      }
+    : undefined,
   enableSubscriptions: false,
   restrictedCountries: [],
   enableOnboardingEmails: process.env.ENABLE_ONBOARDING_EMAILS === 'true',
