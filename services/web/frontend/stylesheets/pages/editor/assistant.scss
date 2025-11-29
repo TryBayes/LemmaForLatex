@@ -271,12 +271,13 @@
 
     &:hover {
       background-color: var(--bg-accent-03);
-      color: var(--content-primary-themed); // Ensure this contrasts with bg-accent-03
+      color: var(--content-primary);
     }
 
     &:focus {
       outline: none;
       background-color: var(--bg-accent-03);
+      color: var(--content-primary);
     }
 
     option {
