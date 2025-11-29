@@ -387,6 +387,14 @@ const settings = {
     freeMessagesPerWeek: parseInt(process.env.AI_FREE_MESSAGES_PER_WEEK || '5', 10),
     proMessagesPerWeek: -1, // Unlimited
   },
+
+  // AI Assistant Configuration
+  ai: process.env.AI_GATEWAY_API_KEY
+    ? {
+        model: process.env.AI_MODEL || 'anthropic/claude-sonnet-4-5',
+        apiKey: process.env.AI_GATEWAY_API_KEY,
+      }
+    : undefined,
 }
 
 // # OPTIONAL CONFIGURABLE SETTINGS

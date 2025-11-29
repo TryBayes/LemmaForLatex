@@ -96,6 +96,19 @@ services:
             GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
             GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
 
+            ####################################
+            ## Stripe Configuration           ##
+            ####################################
+            STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+            STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+            STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+            STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}
+
+            ####################################
+            ## AI Configuration               ##
+            ####################################
+            AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+
             ################
             ## Server Pro ##
             ################
