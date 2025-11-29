@@ -4,7 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import RailPanelHeader from '../rail/rail-panel-header'
-import { useAiAssistant, Message, ToolResult } from './use-ai-assistant'
+import {
+  useAiAssistant,
+  Message,
+  ToolResult,
+  MessagePart,
+} from './use-ai-assistant'
 import ReactMarkdown from 'react-markdown'
 
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
@@ -86,64 +91,90 @@ export const AssistantPane = () => {
 function MessageList({ messages }: { messages: Message[] }) {
   return (
     <ul className="assistant-message-list">
-      {messages.map(message => (
-        <li
-          key={message.id}
-          className={classNames('assistant-message', {
-            'assistant-message-user': message.role === 'user',
-            'assistant-message-ai': message.role === 'assistant',
-          })}
-        >
-          <div className="assistant-message-content">
-            {message.role === 'assistant' ? (
-              <ReactMarkdown>{message.content || '...'}</ReactMarkdown>
-            ) : (
-              message.content
-            )}
-          </div>
-          {message.toolResults && message.toolResults.length > 0 && (
-            <ToolResultsDisplay results={message.toolResults} />
-          )}
-        </li>
-      ))}
+      {messages.map(message => {
+        if (message.role === 'user') {
+          return (
+            <li key={message.id} className="assistant-message assistant-message-user">
+              <div className="assistant-message-content">{message.content}</div>
+            </li>
+          )
+        }
+
+        // Assistant message - render parts as separate bubbles
+        if (message.parts?.length) {
+          return <MessageParts key={message.id} parts={message.parts} />
+        }
+
+        // Fallback for simple assistant message
+        const hasContent = message.content && message.content.trim()
+        if (!hasContent) return null
+
+        return (
+          <li key={message.id} className="assistant-message assistant-message-ai">
+            <div className="assistant-message-content">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          </li>
+        )
+      })}
     </ul>
   )
 }
 
-function ToolResultsDisplay({ results }: { results: ToolResult[] }) {
-  const [expanded, setExpanded] = useState(false)
-
-  if (results.length === 0) return null
-
+function MessageParts({ parts }: { parts: MessagePart[] }) {
   return (
-    <div className="assistant-tool-results">
-      <button
-        className="assistant-tool-toggle"
-        onClick={() => setExpanded(!expanded)}
-        type="button"
-      >
-        <MaterialIcon type={expanded ? 'expand_less' : 'expand_more'} />
-        <span>
-          {results.length} tool {results.length === 1 ? 'call' : 'calls'}
-        </span>
-      </button>
-      {expanded && (
-        <div className="assistant-tool-results-list">
-          {results.map((result, index) => (
-            <div key={index} className="assistant-tool-result">
-              <div className="assistant-tool-name">
-                <MaterialIcon type="build" />
-                {formatToolName(result.toolName)}
+    <>
+      {parts.map((part, index) => {
+        if (part.type === 'text') {
+          // Skip empty text parts
+          if (!part.content || !part.content.trim()) return null
+          
+          return (
+            <li key={`text-${index}`} className="assistant-message assistant-message-ai">
+              <div className="assistant-message-content">
+                <ReactMarkdown>{part.content}</ReactMarkdown>
               </div>
-              <pre className="assistant-tool-output">
-                {JSON.stringify(result.result, null, 2)}
-              </pre>
-            </div>
-          ))}
+            </li>
+          )
+        }
+
+        // Tool results as their own bubble
+        if (part.results.length === 0) return null
+        
+        return (
+          <li key={`tool-${index}`} className="assistant-message assistant-message-tool">
+            <ToolCallBubble results={part.results} />
+          </li>
+        )
+      })}
+    </>
+  )
+}
+
+function ToolCallBubble({ results }: { results: ToolResult[] }) {
+  return (
+    <div className="assistant-tool-bubble">
+      {results.map((result, index) => (
+        <div key={index} className="assistant-tool-chip">
+          <MaterialIcon type={getToolIcon(result.toolName)} />
+          <span>{formatToolName(result.toolName)}</span>
+          <MaterialIcon type="check_circle" className="assistant-tool-check" />
         </div>
-      )}
+      ))}
     </div>
   )
+}
+
+function getToolIcon(toolName: string): string {
+  const iconMap: Record<string, string> = {
+    list_files: 'folder_open',
+    read_file: 'description',
+    edit_file: 'edit_document',
+    write_file: 'note_add',
+    search: 'search',
+    run_command: 'terminal',
+  }
+  return iconMap[toolName] || 'build'
 }
 
 function formatToolName(name: string): string {

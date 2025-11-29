@@ -273,75 +273,38 @@
   }
 }
 
-// Tool results display
-.assistant-tool-results {
-  margin-top: var(--spacing-02);
-  width: 100%;
-  max-width: 85%;
+// Tool call bubble - its own message bubble
+.assistant-message-tool {
+  align-items: flex-start;
 }
 
-.assistant-tool-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-01);
-  background: none;
-  border: 1px solid var(--border-color-themed);
-  border-radius: var(--border-radius-base);
-  padding: var(--spacing-01) var(--spacing-02);
-  font-size: var(--font-size-01);
-  color: var(--content-secondary-themed);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background-color: var(--bg-light-secondary);
-  }
-  
-  .material-symbols {
-    font-size: 16px;
-  }
-}
-
-.assistant-tool-results-list {
-  margin-top: var(--spacing-02);
+.assistant-tool-bubble {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-02);
 }
 
-.assistant-tool-result {
-  background-color: var(--bg-light-secondary);
-  border-radius: var(--border-radius-base);
-  overflow: hidden;
-}
-
-.assistant-tool-name {
-  display: flex;
+.assistant-tool-chip {
+  display: inline-flex;
   align-items: center;
   gap: var(--spacing-02);
   padding: var(--spacing-02) var(--spacing-03);
-  background-color: var(--bg-light-tertiary);
-  font-size: var(--font-size-01);
-  font-weight: 600;
-  color: var(--content-primary-themed);
+  background-color: #f0f4f8;
+  border: 1px solid #d0dae5;
+  border-radius: 20px;
+  font-size: var(--font-size-02);
+  font-weight: 500;
+  color: #2d3748;
   
   .material-symbols {
-    font-size: 14px;
-    color: var(--content-secondary-themed);
+    font-size: 16px;
+    color: #4a90d9;
   }
-}
-
-.assistant-tool-output {
-  margin: 0;
-  padding: var(--spacing-02) var(--spacing-03);
-  font-size: var(--font-size-01);
-  font-family: var(--font-family-monospace);
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 200px;
-  overflow-y: auto;
-  background-color: var(--bg-dark-secondary);
-  color: var(--content-primary-dark);
+  
+  .assistant-tool-check {
+    font-size: 14px;
+    color: #38a169;
+  }
 }
 
 // Markdown content styling in messages

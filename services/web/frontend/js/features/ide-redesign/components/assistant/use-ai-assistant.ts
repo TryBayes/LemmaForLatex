@@ -10,11 +10,24 @@ export interface Message {
   role: MessageRole
   timestamp: Date
   toolResults?: ToolResult[]
+  parts?: MessagePart[]
 }
 
 export interface ToolResult {
   toolName: string
   result: unknown
+}
+
+export type MessagePart = TextPart | ToolResultsPart
+
+interface TextPart {
+  type: 'text'
+  content: string
+}
+
+interface ToolResultsPart {
+  type: 'tool_results'
+  results: ToolResult[]
 }
 
 interface StreamEvent {
@@ -53,6 +66,7 @@ export function useAiAssistant() {
         role: 'assistant',
         timestamp: new Date(),
         toolResults: [],
+        parts: [{ type: 'text', content: '' }],
       }
 
       setMessages(prev => [...prev, assistantMessage])
@@ -95,6 +109,7 @@ export function useAiAssistant() {
         const decoder = new TextDecoder()
         let accumulatedContent = ''
         let accumulatedToolResults: ToolResult[] = []
+        let parts: MessagePart[] = [{ type: 'text', content: '' }]
 
         while (true) {
           const { done, value } = await reader.read()
@@ -118,10 +133,25 @@ export function useAiAssistant() {
                     if (typeof event.data === 'string') {
                       accumulatedContent += event.data
                       console.log('[AI Assistant Frontend] Accumulated content:', accumulatedContent)
+                      // append to the latest text part or create one
+                      const lastPart = parts[parts.length - 1]
+                      if (lastPart && lastPart.type === 'text') {
+                        lastPart.content += event.data
+                      } else {
+                        parts.push({ type: 'text', content: event.data })
+                      }
                       setMessages(prev =>
                         prev.map(msg =>
                           msg.id === assistantMessageId
-                            ? { ...msg, content: accumulatedContent }
+                            ? {
+                                ...msg,
+                                content: accumulatedContent,
+                                parts: parts.map(part =>
+                                  part.type === 'tool_results'
+                                    ? { ...part, results: [...part.results] }
+                                    : { ...part }
+                                ),
+                              }
                             : msg
                         )
                       )
@@ -135,10 +165,22 @@ export function useAiAssistant() {
                         ...accumulatedToolResults,
                         ...event.data,
                       ]
+                      parts.push({
+                        type: 'tool_results',
+                        results: event.data,
+                      })
                       setMessages(prev =>
                         prev.map(msg =>
                           msg.id === assistantMessageId
-                            ? { ...msg, toolResults: accumulatedToolResults }
+                            ? {
+                                ...msg,
+                                toolResults: accumulatedToolResults,
+                                parts: parts.map(part =>
+                                  part.type === 'tool_results'
+                                    ? { ...part, results: [...part.results] }
+                                    : { ...part }
+                                ),
+                              }
                             : msg
                         )
                       )
@@ -213,4 +255,3 @@ export function useAiAssistant() {
     stopGeneration,
   }
 }
-
