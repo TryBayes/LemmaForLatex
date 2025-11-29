@@ -35,11 +35,14 @@ interface StreamEvent {
   data?: string | ToolResult[]
 }
 
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5'
+
 export function useAiAssistant() {
   const { projectId } = useProjectContext()
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const sendMessage = useCallback(
@@ -91,7 +94,7 @@ export function useAiAssistant() {
             'X-Csrf-Token': getMeta('ol-csrfToken'),
           },
           credentials: 'same-origin',
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({ messages: apiMessages, model: selectedModel }),
           signal: abortControllerRef.current.signal,
         })
 
@@ -231,7 +234,7 @@ export function useAiAssistant() {
         setIsLoading(false)
       }
     },
-    [projectId, messages]
+    [projectId, messages, selectedModel]
   )
 
   const clearMessages = useCallback(() => {
@@ -253,5 +256,7 @@ export function useAiAssistant() {
     sendMessage,
     clearMessages,
     stopGeneration,
+    selectedModel,
+    setSelectedModel,
   }
 }

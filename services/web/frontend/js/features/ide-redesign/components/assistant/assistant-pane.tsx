@@ -13,7 +13,7 @@ import ReactMarkdown from 'react-markdown'
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
 
 export const AssistantPane = () => {
-  const { messages, isLoading, error, sendMessage, stopGeneration } =
+  const { messages, isLoading, error, sendMessage, stopGeneration, setSelectedModel, selectedModel } =
     useAiAssistant()
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -77,6 +77,8 @@ export const AssistantPane = () => {
             onSend={() => handleSendMessage(inputValue)}
             onStop={stopGeneration}
             isLoading={isLoading}
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
           />
         </aside>
       </div>
@@ -179,6 +181,15 @@ function formatToolName(name: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
+// Available models for Vercel AI Gateway
+const AI_MODELS = [
+  { id: 'anthropic/claude-sonnet-4-5', name: 'Claude Sonnet 4.5', provider: 'Anthropic' },
+  { id: 'anthropic/claude-opus-4-5', name: 'Claude Opus 4.5', provider: 'Anthropic' },
+  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI' },
+  { id: 'openai/gpt-5', name: 'GPT-5', provider: 'OpenAI' },
+  { id: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', provider: 'Google' },
+]
+
 function AssistantInput({
   value,
   onChange,
@@ -186,6 +197,8 @@ function AssistantInput({
   onSend,
   onStop,
   isLoading,
+  selectedModel,
+  onModelChange,
 }: {
   value: string
   onChange: (value: string) => void
@@ -193,40 +206,62 @@ function AssistantInput({
   onSend: () => void
   onStop: () => void
   isLoading: boolean
+  selectedModel: string
+  onModelChange: (model: string) => void
 }) {
   return (
     <form className="assistant-input" onSubmit={e => e.preventDefault()}>
-      <label htmlFor="assistant-input" className="visually-hidden">
-        Ask AI assistant
-      </label>
-      <textarea
-        id="assistant-input"
-        placeholder="Ask AI assistant"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onKeyDown={onKeyDown}
-        disabled={isLoading}
-      />
-      {isLoading ? (
-        <button
-          type="button"
-          className="assistant-send-button assistant-stop-button"
-          onClick={onStop}
-          aria-label="Stop"
+      <div className="assistant-model-selector">
+        <span className="assistant-model-label">Model</span>
+        <select
+          className="assistant-model-select"
+          value={selectedModel}
+          onChange={e => onModelChange(e.target.value)}
+          disabled={isLoading}
         >
-          <MaterialIcon type="stop" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="assistant-send-button"
-          onClick={onSend}
-          disabled={!value.trim()}
-          aria-label="Send"
-        >
-          <MaterialIcon type="send" />
-        </button>
-      )}
+          {AI_MODELS.map(model => (
+            <option key={model.id} value={model.id}>
+              {model.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="assistant-input-row">
+        <div className="assistant-textarea-wrapper">
+          <label htmlFor="assistant-input" className="visually-hidden">
+            Ask AI assistant
+          </label>
+          <textarea
+            id="assistant-input"
+            placeholder="Ask AI assistant..."
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            disabled={isLoading}
+            rows={1}
+          />
+        </div>
+        {isLoading ? (
+          <button
+            type="button"
+            className="assistant-send-button assistant-stop-button"
+            onClick={onStop}
+            aria-label="Stop"
+          >
+            <MaterialIcon type="stop" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="assistant-send-button"
+            onClick={onSend}
+            disabled={!value.trim()}
+            aria-label="Send"
+          >
+            <MaterialIcon type="send" />
+          </button>
+        )}
+      </div>
     </form>
   )
 }

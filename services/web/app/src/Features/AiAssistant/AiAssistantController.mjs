@@ -30,7 +30,7 @@ Always use the tools when the user asks about their document or wants to make ch
  */
 async function chat(req, res) {
   const { project_id: projectId } = req.params
-  const { messages } = req.body
+  const { messages, model } = req.body
   const userId = SessionManager.getLoggedInUserId(req.session)
 
   if (!userId) {
@@ -61,12 +61,14 @@ async function chat(req, res) {
     // Create tools for the AI agent
     const tools = createProjectTools(projectId, userId)
 
-    console.log('[AI Assistant] Starting streamText with model:', Settings.ai?.model || 'anthropic/claude-sonnet-4-5')
+    // Use model from request or fall back to settings/default
+    const selectedModel = model || Settings.ai?.model || 'anthropic/claude-sonnet-4-5'
+    console.log('[AI Assistant] Starting streamText with model:', selectedModel)
     console.log('[AI Assistant] Messages:', JSON.stringify(messages, null, 2))
 
     // Stream the response using AI SDK with tools enabled
     const result = streamText({
-      model: Settings.ai?.model || 'anthropic/claude-sonnet-4-5',
+      model: selectedModel,
       system: SYSTEM_PROMPT,
       messages,
       tools,
