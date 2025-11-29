@@ -109,6 +109,22 @@ services:
             ####################################
             AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
 
+            ####################################
+            ## S3 Storage Configuration       ##
+            ####################################
+            OVERLEAF_FILESTORE_BACKEND: ${OVERLEAF_FILESTORE_BACKEND:-}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+            AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+            OVERLEAF_FILESTORE_TEMPLATE_FILES_BUCKET_NAME: ${OVERLEAF_FILESTORE_TEMPLATE_FILES_BUCKET_NAME:-}
+            OVERLEAF_HISTORY_PROJECT_BLOBS_BUCKET: ${OVERLEAF_HISTORY_PROJECT_BLOBS_BUCKET:-}
+            OVERLEAF_HISTORY_BLOBS_BUCKET: ${OVERLEAF_HISTORY_BLOBS_BUCKET:-}
+            OVERLEAF_HISTORY_BACKEND: ${OVERLEAF_HISTORY_BACKEND:-}
+            OVERLEAF_HISTORY_S3_ACCESS_KEY_ID: ${OVERLEAF_HISTORY_S3_ACCESS_KEY_ID:-}
+            OVERLEAF_HISTORY_S3_SECRET_ACCESS_KEY: ${OVERLEAF_HISTORY_S3_SECRET_ACCESS_KEY:-}
+            OVERLEAF_HISTORY_S3_REGION: ${OVERLEAF_HISTORY_S3_REGION:-}
+            OVERLEAF_HISTORY_CHUNKS_BUCKET: ${OVERLEAF_HISTORY_CHUNKS_BUCKET:-}
+
             ################
             ## Server Pro ##
             ################
