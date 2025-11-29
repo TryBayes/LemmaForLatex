@@ -219,6 +219,14 @@ export interface Meta {
   'ol-planCode': string
   'ol-planCodesChangingAtTermEnd': string[] | undefined
   'ol-plans': Plan[]
+  'ol-plansPageData': {
+    currentPlan: string
+    hasPaidPlan: boolean
+    weeklyMessages: number
+    weeklyLimit: number
+    remaining: number
+    stripePublishableKey: string | null
+  }
   'ol-portalTemplates': PortalTemplate[]
   'ol-postCheckoutRedirect': string
   'ol-postUrl': string

@@ -3,8 +3,9 @@ import useCollapsiblePanel from '@/features/ide-react/hooks/use-collapsible-pane
 import { useCallback, useRef, useState } from 'react'
 import { ImperativePanelHandle } from 'react-resizable-panels'
 
-export const useChatPane = () => {
-  const { chatIsOpen: isOpen, setChatIsOpen: setIsOpen } = useLayoutContext()
+export const useAiAssistantPane = () => {
+  const { aiAssistantIsOpen: isOpen, setAiAssistantIsOpen: setIsOpen } =
+    useLayoutContext()
   const [resizing, setResizing] = useState(false)
   const panelRef = useRef<ImperativePanelHandle>(null)
 
@@ -17,7 +18,7 @@ export const useChatPane = () => {
   // These handlers are called by react-resizable-panels but we don't
   // want them to affect the global state - only the toolbar button should
   // control the panel state. This prevents the issue where collapsing one
-  // panel causes another to expand (e.g., chat and AI assistant panels).
+  // panel causes the other to expand.
   const handlePaneExpand = useCallback(() => {
     // No-op: state is controlled via toolbar button only
   }, [])

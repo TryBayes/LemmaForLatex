@@ -16,6 +16,7 @@ import { expressify } from '@overleaf/promise-utils'
 import logger from '@overleaf/logger'
 import Features from '../../infrastructure/Features.mjs'
 import SubscriptionViewModelBuilder from '../Subscription/SubscriptionViewModelBuilder.mjs'
+import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
 import NotificationsHandler from '../Notifications/NotificationsHandler.mjs'
 import Modules from '../../infrastructure/Modules.mjs'
 import { OError, V1ConnectionError } from '../Errors/Errors.js'
@@ -228,6 +229,38 @@ async function projectListPage(req, res, next) {
       })
     ) {
       return res.redirect('/user/emails/primary-email-check')
+    }
+  } else {
+    // For non-SaaS (Lemma) deployments, provide subscription info based on user's subscription
+    try {
+      const subscription = await SubscriptionLocator.promises.getUsersSubscription(userId)
+      const hasPaidPlan = subscription && subscription.planCode && subscription.planCode !== 'free'
+      
+      if (hasPaidPlan) {
+        usersBestSubscription = {
+          type: 'individual',
+          plan: {
+            name: 'Lemma Pro',
+          },
+          remainingTrialDays: -1,
+          featuresPageURL: '/learn/how-to/Overleaf_premium_features',
+        }
+      } else {
+        usersBestSubscription = {
+          type: 'free',
+          featuresPageURL: '/learn/how-to/Overleaf_premium_features',
+        }
+      }
+    } catch (error) {
+      logger.err(
+        { err: error, userId },
+        "Failed to get user's subscription for plan widget"
+      )
+      // Default to free plan if there's an error
+      usersBestSubscription = {
+        type: 'free',
+        featuresPageURL: '/learn/how-to/Overleaf_premium_features',
+      }
     }
   }
 

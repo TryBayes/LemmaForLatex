@@ -36,6 +36,8 @@ const EditorNavigationToolbarRoot = React.memo(
     const {
       chatIsOpen,
       setChatIsOpen,
+      aiAssistantIsOpen,
+      setAiAssistantIsOpen,
       reviewPanelOpen,
       setReviewPanelOpen,
       view,
@@ -48,12 +50,25 @@ const EditorNavigationToolbarRoot = React.memo(
     const toggleChatOpen = useCallback(() => {
       if (!chatIsOpen) {
         markMessagesAsRead()
+        // Close AI assistant when opening chat (mutually exclusive)
+        setAiAssistantIsOpen(false)
       }
       eventTracking.sendMB('navigation-clicked-chat', {
         action: isOpentoString(!chatIsOpen),
       })
       setChatIsOpen(!chatIsOpen)
-    }, [chatIsOpen, setChatIsOpen, markMessagesAsRead])
+    }, [chatIsOpen, setChatIsOpen, markMessagesAsRead, setAiAssistantIsOpen])
+
+    const toggleAiAssistantOpen = useCallback(() => {
+      if (!aiAssistantIsOpen) {
+        // Close chat when opening AI assistant (mutually exclusive)
+        setChatIsOpen(false)
+      }
+      eventTracking.sendMB('navigation-clicked-ai-assistant', {
+        action: isOpentoString(!aiAssistantIsOpen),
+      })
+      setAiAssistantIsOpen(!aiAssistantIsOpen)
+    }, [aiAssistantIsOpen, setAiAssistantIsOpen, setChatIsOpen])
 
     const toggleReviewPanelOpen = useCallback(
       (event: any) => {
@@ -108,6 +123,8 @@ const EditorNavigationToolbarRoot = React.memo(
         chatIsOpen={chatIsOpen}
         unreadMessageCount={unreadMessageCount}
         toggleChatOpen={toggleChatOpen}
+        aiAssistantIsOpen={aiAssistantIsOpen}
+        toggleAiAssistantOpen={toggleAiAssistantOpen}
         reviewPanelOpen={reviewPanelOpen}
         toggleReviewPanelOpen={toggleReviewPanelOpen}
         historyIsOpen={view === 'history'}

@@ -238,6 +238,12 @@ export const EditorManagerProvider: FC<React.PropsWithChildren> = ({
           return
         }
         if (
+          update.meta.type === 'external' &&
+          update.meta.source === 'ai-assistant'
+        ) {
+          return
+        }
+        if (
           update.meta.origin?.kind === 'file-restore' ||
           update.meta.origin?.kind === 'project-restore'
         ) {

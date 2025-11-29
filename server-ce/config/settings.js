@@ -307,6 +307,16 @@ const settings = {
   // Subscriptions
   enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
 
+  // Stripe Configuration
+  stripe: process.env.STRIPE_SECRET_KEY
+    ? {
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+        proPriceId: process.env.STRIPE_PRO_PRICE_ID, // Monthly $20 price ID
+      }
+    : undefined,
+
   // Google OAuth Configuration
   oauthProviders: process.env.GOOGLE_CLIENT_ID
     ? {
@@ -335,83 +345,56 @@ const settings = {
     compileGroup: 'standard',
     trackChanges: true,
     references: true,
+    aiMessagesPerWeek: 5, // Free tier: 5 AI messages per week
   },
 
   // Plan definitions for subscriptions
   plans: [
     {
-      planCode: 'personal',
-      name: 'Personal',
+      planCode: 'free',
+      name: 'Free',
       price_in_cents: 0,
       features: {
-        collaborators: 1,
-        dropbox: false,
-        versioning: false,
-        compileTimeout: 60,
+        collaborators: -1,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: parseIntOrFail(process.env.COMPILE_TIMEOUT || 180),
         compileGroup: 'standard',
-        trackChanges: false,
-        references: false,
-      },
-    },
-    {
-      planCode: 'collaborator',
-      name: 'Standard',
-      price_in_cents: 1500,
-      features: {
-        collaborators: 10,
-        dropbox: true,
-        versioning: true,
-        compileTimeout: 180,
-        compileGroup: 'priority',
         trackChanges: true,
         references: true,
+        aiMessagesPerWeek: 5, // 5 AI messages per week
       },
     },
     {
-      planCode: 'collaborator-annual',
-      name: 'Standard Annual',
-      price_in_cents: 12900,
-      annual: true,
-      features: {
-        collaborators: 10,
-        dropbox: true,
-        versioning: true,
-        compileTimeout: 180,
-        compileGroup: 'priority',
-        trackChanges: true,
-        references: true,
-      },
-    },
-    {
-      planCode: 'professional',
-      name: 'Professional',
-      price_in_cents: 3000,
+      planCode: 'pro',
+      name: 'Lemma Pro',
+      price_in_cents: 2000, // $20/month
       features: {
         collaborators: -1,
         dropbox: true,
         versioning: true,
-        compileTimeout: 180,
+        compileTimeout: parseIntOrFail(process.env.COMPILE_TIMEOUT || 180),
         compileGroup: 'priority',
         trackChanges: true,
         references: true,
-      },
-    },
-    {
-      planCode: 'professional-annual',
-      name: 'Professional Annual',
-      price_in_cents: 25900,
-      annual: true,
-      features: {
-        collaborators: -1,
-        dropbox: true,
-        versioning: true,
-        compileTimeout: 180,
-        compileGroup: 'priority',
-        trackChanges: true,
-        references: true,
+        aiMessagesPerWeek: -1, // Unlimited AI messages
       },
     },
   ],
+
+  // AI message limits
+  aiMessageLimits: {
+    freeMessagesPerWeek: parseInt(process.env.AI_FREE_MESSAGES_PER_WEEK || '5', 10),
+    proMessagesPerWeek: -1, // Unlimited
+  },
+
+  // AI Assistant Configuration
+  ai: process.env.AI_GATEWAY_API_KEY
+    ? {
+        model: process.env.AI_MODEL || 'anthropic/claude-sonnet-4-5',
+        apiKey: process.env.AI_GATEWAY_API_KEY,
+      }
+    : undefined,
 }
 
 // # OPTIONAL CONFIGURABLE SETTINGS

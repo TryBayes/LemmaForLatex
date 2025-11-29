@@ -446,7 +446,26 @@ module.exports = {
 
   disableChat: process.env.OVERLEAF_DISABLE_CHAT === 'true',
   disableLinkSharing: process.env.OVERLEAF_DISABLE_LINK_SHARING === 'true',
-  enableSubscriptions: false,
+
+  // AI Assistant Configuration
+  ai: process.env.AI_GATEWAY_API_KEY
+    ? {
+        model: process.env.AI_MODEL || 'openai/gpt-5-mini',
+        apiKey: process.env.AI_GATEWAY_API_KEY,
+      }
+    : undefined,
+  enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
+
+  // Stripe Configuration
+  stripe: process.env.STRIPE_SECRET_KEY
+    ? {
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+        proPriceId: process.env.STRIPE_PRO_PRICE_ID,
+      }
+    : undefined,
+
   restrictedCountries: [],
   enableOnboardingEmails: process.env.ENABLE_ONBOARDING_EMAILS === 'true',
 

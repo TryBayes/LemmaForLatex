@@ -11,6 +11,8 @@ import EditorSidebar from '@/features/ide-react/components/editor-sidebar'
 import { useTranslation } from 'react-i18next'
 import { useSidebarPane } from '@/features/ide-react/hooks/use-sidebar-pane'
 import { useChatPane } from '@/features/ide-react/hooks/use-chat-pane'
+import { useAiAssistantPane } from '@/features/ide-react/hooks/use-ai-assistant-pane'
+import { AssistantPane } from '@/features/ide-redesign/components/assistant/assistant-pane'
 import { EditorAndPdf } from '@/features/ide-react/components/editor-and-pdf'
 import HistoryContainer from '@/features/ide-react/components/history-container'
 import getMeta from '@/utils/meta'
@@ -47,8 +49,21 @@ export const MainLayout: FC = () => {
     handlePaneExpand: handleChatExpand,
   } = useChatPane()
 
+  const {
+    isOpen: aiAssistantIsOpen,
+    panelRef: aiAssistantPanelRef,
+    togglePane: toggleAiAssistant,
+    resizing: aiAssistantResizing,
+    setResizing: setAiAssistantResizing,
+    handlePaneCollapse: handleAiAssistantCollapse,
+    handlePaneExpand: handleAiAssistantExpand,
+  } = useAiAssistantPane()
+
   const chatEnabled =
     getMeta('ol-capabilities')?.includes('chat') && !isRestrictedTokenMember
+
+  // AI assistant is always enabled (no capability check required)
+  const aiAssistantEnabled = true
 
   const { t } = useTranslation()
 
@@ -60,7 +75,8 @@ export const MainLayout: FC = () => {
           autoSaveId="ide-outer-layout"
           direction="horizontal"
           className={classNames({
-            'ide-panel-group-resizing': sidebarResizing || chatResizing,
+            'ide-panel-group-resizing':
+              sidebarResizing || chatResizing || aiAssistantResizing,
           })}
         >
           {/* sidebar */}
@@ -96,13 +112,35 @@ export const MainLayout: FC = () => {
           </HorizontalResizeHandle>
 
           <Panel id="panel-outer-main" order={2}>
-            <PanelGroup autoSaveId="ide-inner-layout" direction="horizontal">
+            <PanelGroup autoSaveId="ide-inner-layout-v2" direction="horizontal">
               <Panel className="ide-react-panel" id="panel-main" order={1}>
                 <HistoryContainer />
                 <EditorAndPdf />
               </Panel>
 
-              {chatEnabled && (
+              {aiAssistantEnabled && aiAssistantIsOpen && (
+                <>
+                  {/* AI Assistant */}
+                  <HorizontalResizeHandle
+                    onDoubleClick={toggleAiAssistant}
+                    resizable={aiAssistantIsOpen}
+                    onDragging={setAiAssistantResizing}
+                    hitAreaMargins={{ coarse: 0, fine: 0 }}
+                  />
+
+                  <Panel
+                    id="panel-ai-assistant"
+                    order={2}
+                    defaultSize={20}
+                    minSize={5}
+                    maxSize={30}
+                  >
+                    <AssistantPane />
+                  </Panel>
+                </>
+              )}
+
+              {chatEnabled && chatIsOpen && (
                 <>
                   <HorizontalResizeHandle
                     onDoubleClick={toggleChat}
@@ -113,15 +151,11 @@ export const MainLayout: FC = () => {
 
                   {/* chat */}
                   <Panel
-                    ref={chatPanelRef}
                     id="panel-chat"
-                    order={2}
+                    order={3}
                     defaultSize={20}
                     minSize={5}
                     maxSize={30}
-                    collapsible
-                    onCollapse={handleChatCollapse}
-                    onExpand={handleChatExpand}
                   >
                     <ChatPane />
                   </Panel>

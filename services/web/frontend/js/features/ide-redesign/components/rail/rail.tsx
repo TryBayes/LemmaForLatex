@@ -5,6 +5,7 @@ import { useLayoutContext } from '@/shared/context/layout-context'
 import { RailTabKey, useRailContext } from '../../contexts/rail-context'
 import FileTreeOutlinePanel from '../file-tree/file-tree-outline-panel'
 import { ChatIndicator, ChatPane } from '../chat/chat'
+import { AssistantPane } from '../assistant/assistant-pane'
 import getMeta from '@/utils/meta'
 import classNames from 'classnames'
 import IntegrationsPanel from '../integrations-panel/integrations-panel'
@@ -94,6 +95,12 @@ export const RailLayout = () => {
         indicator: <ChatIndicator />,
         title: t('chat'),
         hide: !getMeta('ol-capabilities')?.includes('chat'),
+      },
+      {
+        key: 'ai-assistant',
+        icon: 'smart_toy',
+        component: <AssistantPane />,
+        title: t('ai_assistant'),
       },
       ...moduleRailEntries,
     ],

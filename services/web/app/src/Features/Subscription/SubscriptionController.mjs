@@ -362,40 +362,95 @@ async function userSubscriptionPage(req, res) {
   res.render('subscriptions/dashboard-react', data)
 }
 
+/**
+ * Lemma Pro plans page
+ */
+async function plansPage(req, res) {
+  const user = SessionManager.getSessionUser(req.session)
+  if (!user) {
+    throw new Error('User is not logged in')
+  }
+
+  // Get user's current subscription status
+  const subscription = await SubscriptionLocator.promises.getUsersSubscription(user._id)
+  const hasPaidPlan = subscription && subscription.planCode && subscription.planCode !== 'free'
+
+  // Get AI message count
+  const { AiMessageCount } = await import('../../models/AiMessageCount.mjs')
+  const { weeklyMessages } = await AiMessageCount.getWeeklyCount(user._id)
+  const weeklyLimit = Settings.aiMessageLimits?.freeMessagesPerWeek || 5
+
+  const plans = Settings.plans || []
+
+  res.render('subscriptions/plans', {
+    title: 'Upgrade to Lemma Pro',
+    user: sanitizeSessionUserForFrontEnd(user),
+    plans,
+    currentPlan: hasPaidPlan ? subscription.planCode : 'free',
+    hasPaidPlan,
+    weeklyMessages,
+    weeklyLimit,
+    remaining: hasPaidPlan ? -1 : Math.max(0, weeklyLimit - weeklyMessages),
+    stripePublishableKey: Settings.stripe?.publishableKey || null,
+  })
+}
+
 async function successfulSubscription(req, res) {
   const user = SessionManager.getSessionUser(req.session)
   if (!user) {
     throw new Error('User is not logged in')
   }
-  const { personalSubscription } =
-    await SubscriptionViewModelBuilder.promises.buildUsersSubscriptionViewModel(
-      user,
-      req.i18n.language
-    )
 
-  const postCheckoutRedirect = req.session?.postCheckoutRedirect
+  // Check if user has a Stripe subscription
+  const subscription = await SubscriptionLocator.promises.getUsersSubscription(user._id)
+  const hasStripeSubscription = subscription?.paymentProvider?.service === 'stripe' && 
+    subscription?.planCode && subscription?.planCode !== 'free'
 
-  if (!personalSubscription) {
-    res.redirect('/user/subscription/plans')
-  } else {
-    const userInDb = await User.findById(user._id, {
-      _id: 1,
-      features: 1,
+  if (hasStripeSubscription) {
+    // Simple thank-you page for Stripe subscriptions
+    res.render('subscriptions/stripe-success', {
+      title: 'Welcome to Lemma Pro',
+      planName: 'Lemma Pro',
     })
+    return
+  }
 
-    if (!userInDb) {
-      throw new Error('User not found')
+  // Fall back to original logic for Recurly subscriptions
+  try {
+    const { personalSubscription } =
+      await SubscriptionViewModelBuilder.promises.buildUsersSubscriptionViewModel(
+        user,
+        req.i18n.language
+      )
+
+    const postCheckoutRedirect = req.session?.postCheckoutRedirect
+
+    if (!personalSubscription) {
+      res.redirect('/user/subscription/plans')
+    } else {
+      const userInDb = await User.findById(user._id, {
+        _id: 1,
+        features: 1,
+      })
+
+      if (!userInDb) {
+        throw new Error('User not found')
+      }
+
+      res.render('subscriptions/successful-subscription-react', {
+        title: 'thank_you',
+        personalSubscription,
+        postCheckoutRedirect,
+        user: {
+          _id: user._id,
+          features: userInDb.features,
+        },
+      })
     }
-
-    res.render('subscriptions/successful-subscription-react', {
-      title: 'thank_you',
-      personalSubscription,
-      postCheckoutRedirect,
-      user: {
-        _id: user._id,
-        features: userInDb.features,
-      },
-    })
+  } catch (error) {
+    // If Recurly fails, redirect to plans page
+    logger.error({ err: error, userId: user._id }, 'Error building subscription view model')
+    res.redirect('/user/subscription/plans')
   }
 }
 
@@ -1177,6 +1232,7 @@ function makeChangePreview(
 
 export default {
   userSubscriptionPage: expressify(userSubscriptionPage),
+  plansPage: expressify(plansPage),
   successfulSubscription: expressify(successfulSubscription),
   cancelSubscription,
   pauseSubscription,

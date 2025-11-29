@@ -38,6 +38,8 @@ import os from 'node:os'
 import http from 'node:http'
 import { fileURLToPath } from 'node:url'
 import serveStaticWrapper from './ServeStaticWrapper.mjs'
+import StripeController from '../Features/Subscription/StripeController.mjs'
+import expressBodyParser from 'body-parser'
 import { handleValidationError } from '@overleaf/validation-tools'
 
 const { hasAdminAccess } = AdminAuthorizationHelper
@@ -148,6 +150,13 @@ if (Settings.enabledServices.includes('web')) {
 }
 
 app.use(metrics.http.monitor(logger))
+
+// Stripe webhook must be added BEFORE body parsers to preserve raw body for signature verification
+app.post(
+  '/user/subscription/stripe/webhook',
+  expressBodyParser.raw({ type: 'application/json' }),
+  StripeController.handleWebhook
+)
 
 await Modules.applyMiddleware(app, 'appMiddleware')
 app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }))
