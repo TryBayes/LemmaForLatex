@@ -1,5 +1,5 @@
 import Settings from '@overleaf/settings'
-import mongoose from '../infrastructure/Mongoose.js'
+import mongoose from '../infrastructure/Mongoose.mjs'
 import TokenGenerator from '../Features/TokenGenerator/TokenGenerator.mjs'
 const { Schema } = mongoose
 const { ObjectId } = Schema
@@ -101,6 +101,7 @@ export const UserSchema = new Schema(
       breadcrumbs: { type: Boolean, default: true },
       referencesSearchMode: { type: String, default: 'advanced' }, // 'advanced' or 'simple'
       enableNewEditor: { type: Boolean },
+      darkModePdf: { type: Boolean, default: false },
     },
     features: {
       collaborators: {
