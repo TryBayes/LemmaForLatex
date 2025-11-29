@@ -59,6 +59,7 @@ async function createCheckoutSession(req, res) {
       cancel_url: `${Settings.siteUrl}/user/subscription/plans`,
       client_reference_id: user._id.toString(),
       customer_email: userDoc?.email || user.email,
+      allow_promotion_codes: true,
       metadata: {
         userId: user._id.toString(),
         planCode: 'pro',
