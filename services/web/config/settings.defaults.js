@@ -110,6 +110,17 @@ const httpPermissionsPolicy = {
   },
 }
 
+const redisTls =
+  process.env.REDIS_TLS === 'true'
+    ? {
+        rejectUnauthorized:
+          process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false',
+        ...(process.env.REDIS_TLS_SERVERNAME
+          ? { servername: process.env.REDIS_TLS_SERVERNAME }
+          : {}),
+      }
+    : undefined
+
 module.exports = {
   env: 'server-ce',
 
@@ -152,6 +163,7 @@ module.exports = {
       maxRetriesPerRequest: parseInt(
         process.env.REDIS_MAX_RETRIES_PER_REQUEST || '20'
       ),
+      tls: redisTls,
     },
 
     // websessions:
@@ -191,6 +203,7 @@ module.exports = {
       maxRetriesPerRequest: parseInt(
         process.env.REDIS_MAX_RETRIES_PER_REQUEST || '20'
       ),
+      tls: redisTls,
     },
   },
 
@@ -318,7 +331,7 @@ module.exports = {
 
   splitTests: [],
 
-  // Where your instance of Overleaf Community Edition/Server Pro can be found publicly. Used in emails
+  // Where your instance of Lemma can be found publicly. Used in emails
   // that are sent out, generated links, etc.
   siteUrl: (siteUrl = process.env.PUBLIC_URL || 'http://127.0.0.1:3000'),
 
@@ -436,6 +449,26 @@ module.exports = {
   enableSubscriptions: false,
   restrictedCountries: [],
   enableOnboardingEmails: process.env.ENABLE_ONBOARDING_EMAILS === 'true',
+
+  // Google OAuth Configuration
+  oauthProviders: process.env.GOOGLE_CLIENT_ID
+    ? {
+        google: {
+          name: 'Google',
+          descriptionKey: 'login_with_service',
+          descriptionOptions: { service: 'Google' },
+          linkPath: '/auth/google',
+        },
+      }
+    : {},
+
+  googleOAuth: process.env.GOOGLE_CLIENT_ID
+    ? {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: (process.env.PUBLIC_URL || 'http://localhost') + '/auth/google/callback',
+      }
+    : undefined,
 
   enabledLinkedFileTypes: (process.env.ENABLED_LINKED_FILE_TYPES || '').split(
     ','
@@ -617,7 +650,7 @@ module.exports = {
   // Email support
   // -------------
   //
-  //	Overleaf uses nodemailer (http://www.nodemailer.com/) to send transactional emails.
+  //	Lemma uses nodemailer (http://www.nodemailer.com/) to send transactional emails.
   //	To see the range of transport and options they support, see http://www.nodemailer.com/docs/transports
   // email:
   //	fromAddress: ""
@@ -647,7 +680,7 @@ module.exports = {
   // them.
   cacheStaticAssets: false,
 
-  // If you are running Overleaf over https, set this to true to send the
+  // If you are running Lemma over https, set this to true to send the
   // cookie with a secure flag (recommended).
   secureCookie: false,
 
@@ -656,7 +689,7 @@ module.exports = {
   // https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-03#section-4.1.2.7
   sameSiteCookie: 'lax',
 
-  // If you are running Overleaf behind a proxy (like Apache, Nginx, etc)
+  // If you are running Lemma behind a proxy (like Apache, Nginx, etc)
   // then set this to true to allow it to correctly detect the forwarded IP
   // address and http/https protocol information.
   behindProxy: true,
@@ -771,22 +804,22 @@ module.exports = {
     stepTimeout: parseInt(process.env.SMOKE_TEST_STEP_TIMEOUT || '10000', 10),
   },
 
-  appName: process.env.APP_NAME || 'Overleaf (Community Edition)',
+  appName: process.env.APP_NAME || 'Lemma',
 
-  adminEmail: process.env.ADMIN_EMAIL || 'placeholder@example.com',
+  adminEmail: process.env.ADMIN_EMAIL || 'founders@lemmaforlatex.com',
   adminDomains: process.env.ADMIN_DOMAINS
     ? JSON.parse(process.env.ADMIN_DOMAINS)
     : undefined,
 
   nav: {
-    title: process.env.APP_NAME || 'Overleaf Community Edition',
+    title: process.env.APP_NAME || 'Lemma',
 
     hide_powered_by: process.env.NAV_HIDE_POWERED_BY === 'true',
     left_footer: [],
 
     right_footer: [
       {
-        text: '<a href="https://github.com/overleaf/overleaf">Fork on GitHub!</a>',
+        text: '<a href="https://github.com/TryBayes/LemmaForLatex">Fork on GitHub!</a>',
       },
     ],
 

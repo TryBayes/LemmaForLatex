@@ -3,15 +3,12 @@ services:
         restart: always
         # Server Pro users:
         # image: quay.io/sharelatex/sharelatex-pro
-        image: sharelatex/sharelatex
+        # Official image: sharelatex/sharelatex
+        image: sharelatex/sharelatex:main
         container_name: sharelatex
         depends_on:
             mongo:
                 condition: service_healthy
-            redis:
-                condition: service_started
-        ports:
-            - 80:80
         stop_grace_period: 60s
         volumes:
             - ~/sharelatex_data:/var/lib/overleaf
@@ -22,14 +19,22 @@ services:
             # - /var/run/docker.sock:/var/run/docker.sock
         environment:
 
-            OVERLEAF_APP_NAME: Overleaf Community Edition
+            OVERLEAF_APP_NAME: Lemma
 
             OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex
 
             # Same property, unfortunately with different names in
             # different locations
-            OVERLEAF_REDIS_HOST: redis
-            REDIS_HOST: redis
+            OVERLEAF_REDIS_HOST: ${REDIS_HOST}
+            OVERLEAF_REDIS_PORT: ${REDIS_PORT:-6379}
+            OVERLEAF_REDIS_PASS: ${REDIS_PASSWORD:-}
+            OVERLEAF_REDIS_TLS: ${REDIS_TLS:-false}
+            REDIS_HOST: ${REDIS_HOST}
+            REDIS_PORT: ${REDIS_PORT:-6379}
+            REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+            REDIS_TLS: ${REDIS_TLS:-false}
+            REDIS_TLS_SERVERNAME: ${REDIS_TLS_SERVERNAME:-}
+            REDIS_TLS_REJECT_UNAUTHORIZED: ${REDIS_TLS_REJECT_UNAUTHORIZED:-true}
 
             ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
 
@@ -40,12 +45,14 @@ services:
             EMAIL_CONFIRMATION_DISABLED: 'true'
 
             ## Set for SSL via nginx-proxy
-            #VIRTUAL_HOST: 103.112.212.22
+            VIRTUAL_HOST: projectcobrix.com,ec2-3-229-134-93.compute-1.amazonaws.com,3.229.134.93,localhost
+            LETSENCRYPT_HOST: projectcobrix.com
+            LETSENCRYPT_EMAIL: founders@lemmaforlatex.com
 
-            # OVERLEAF_SITE_URL: http://overleaf.example.com
-            # OVERLEAF_NAV_TITLE: Overleaf Community Edition
+            OVERLEAF_SITE_URL: https://projectcobrix.com
+            OVERLEAF_NAV_TITLE: Lemma
             # OVERLEAF_HEADER_IMAGE_URL: http://example.com/mylogo.png
-            # OVERLEAF_ADMIN_EMAIL: support@it.com
+            OVERLEAF_ADMIN_EMAIL: founders@lemmaforlatex.com
 
             # OVERLEAF_LEFT_FOOTER: '[{"text": "Another page I want to link to can be found <a href=\"here\">here</a>"} ]'
             # OVERLEAF_RIGHT_FOOTER: '[{"text": "Hello I am on the Right"} ]'
@@ -68,6 +75,27 @@ services:
 
             # ENABLE_CRON_RESOURCE_DELETION: true
 
+            ####################################
+            ## Subscription & Registration    ##
+            ####################################
+
+            # Enable user self-registration
+            OVERLEAF_ALLOW_PUBLIC_ACCESS: ${OVERLEAF_ALLOW_PUBLIC_ACCESS:-true}
+
+            # Enable subscriptions
+            ENABLE_SUBSCRIPTIONS: ${ENABLE_SUBSCRIPTIONS:-true}
+
+            # Recurly Configuration
+            RECURLY_API_KEY: ${RECURLY_API_KEY:-}
+            RECURLY_SUBDOMAIN: ${RECURLY_SUBDOMAIN:-}
+            RECURLY_WEBHOOK_USER: ${RECURLY_WEBHOOK_USER:-}
+            RECURLY_WEBHOOK_PASS: ${RECURLY_WEBHOOK_PASS:-}
+
+            # Google OAuth Configuration
+            # Get credentials from: https://console.cloud.google.com/apis/credentials
+            GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+            GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
             ################
             ## Server Pro ##
             ################
@@ -77,14 +105,15 @@ services:
             ## so the following environment variables must be commented out to avoid compile issues.
             ##
             ## Sandboxed Compiles: https://docs.overleaf.com/on-premises/configuration/overleaf-toolkit/server-pro-only-configuration/sandboxed-compiles
-            SANDBOXED_COMPILES: 'true'
+            # Server Pro-only features cause compile failures when enabled in the Community Edition.
+            # SANDBOXED_COMPILES: 'true'
             ### Bind-mount source for /var/lib/overleaf/data/compiles inside the container.
-            SANDBOXED_COMPILES_HOST_DIR_COMPILES: '/home/user/sharelatex_data/data/compiles'
+            # SANDBOXED_COMPILES_HOST_DIR_COMPILES: '/home/ec2-user/sharelatex_data/data/compiles'
             ### Bind-mount source for /var/lib/overleaf/data/output inside the container.
-            SANDBOXED_COMPILES_HOST_DIR_OUTPUT: '/home/user/sharelatex_data/data/output'
+            # SANDBOXED_COMPILES_HOST_DIR_OUTPUT: '/home/ec2-user/sharelatex_data/data/output'
             ### Backwards compatibility (before Server Pro 5.5)
-            DOCKER_RUNNER: 'true'
-            SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true'
+            # DOCKER_RUNNER: 'true'
+            # SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true'
 
             ## Works with test LDAP server shown at bottom of docker compose
             # OVERLEAF_LDAP_URL: 'ldap://ldap:389'
@@ -105,7 +134,7 @@ services:
 
     mongo:
         restart: always
-        image: mongo:6.0
+        image: mongo:8.0
         container_name: mongo
         command: '--replSet overleaf'
         volumes:
@@ -123,13 +152,6 @@ services:
             timeout: 10s
             retries: 5
 
-    redis:
-        restart: always
-        image: redis:6.2
-        container_name: redis
-        volumes:
-            - ~/redis_data:/data
-
     # ldap:
     #    restart: always
     #    image: rroemhild/test-openldap
@@ -140,12 +162,29 @@ services:
     # settings. We recommend using a properly managed nginx instance outside of the Overleaf Server Pro setup,
     # but the example here can be used if you'd prefer to run everything with docker-compose
 
-    # nginx-proxy:
-    #     image: jwilder/nginx-proxy
-    #     container_name: nginx-proxy
-    #     ports:
-    #       - "80:80"
-    #       - "443:443"
-    #     volumes:
-    #       - /var/run/docker.sock:/tmp/docker.sock:ro
-    #       - /home/overleaf/tmp:/etc/nginx/certs
+    nginx-proxy:
+        image: jwilder/nginx-proxy
+        container_name: nginx-proxy
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - /var/run/docker.sock:/tmp/docker.sock:ro
+          - /home/ec2-user/overleaf_certs:/etc/nginx/certs
+          - /home/ec2-user/overleaf_vhost.d:/etc/nginx/vhost.d
+          - /home/ec2-user/overleaf_html:/usr/share/nginx/html
+
+    letsencrypt-companion:
+        image: nginxproxy/acme-companion
+        container_name: letsencrypt-nginx-proxy-companion
+        depends_on:
+          - nginx-proxy
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - /home/ec2-user/overleaf_certs:/etc/nginx/certs
+          - /home/ec2-user/overleaf_vhost.d:/etc/nginx/vhost.d
+          - /home/ec2-user/overleaf_html:/usr/share/nginx/html
+          - /home/ec2-user/overleaf_acme:/etc/acme.sh
+        environment:
+          NGINX_PROXY_CONTAINER: nginx-proxy
+          DEFAULT_EMAIL: founders@lemmaforlatex.com

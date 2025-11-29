@@ -60,7 +60,7 @@ const settings = {
   // Databases
   // ---------
 
-  // Overleaf Community Edition's main persistent data store is MongoDB (http://www.mongodb.org/)
+  // Lemma's main persistent data store is MongoDB (http://www.mongodb.org/)
   // Documentation about the URL connection string format can be found at:
   //
   //    http://docs.mongodb.org/manual/reference/connection-string/
@@ -70,7 +70,7 @@ const settings = {
     url: process.env.OVERLEAF_MONGO_URL || 'mongodb://dockerhost/sharelatex',
   },
 
-  // Redis is used in Overleaf Community Edition for high volume queries, like real-time
+  // Redis is used in Lemma for high volume queries, like real-time
   // editing, and session management.
   //
   // The following config will work with Redis's default settings:
@@ -83,50 +83,50 @@ const settings = {
       key_schema: {
         // document-updater
         blockingKey({ doc_id }) {
-          return `Blocking:${doc_id}`
+          return `Blocking:{${doc_id}}`
         },
         docLines({ doc_id }) {
-          return `doclines:${doc_id}`
+          return `doclines:{${doc_id}}`
         },
         docOps({ doc_id }) {
-          return `DocOps:${doc_id}`
+          return `DocOps:{${doc_id}}`
         },
         docVersion({ doc_id }) {
-          return `DocVersion:${doc_id}`
+          return `DocVersion:{${doc_id}}`
         },
         docHash({ doc_id }) {
-          return `DocHash:${doc_id}`
+          return `DocHash:{${doc_id}}`
         },
         projectKey({ doc_id }) {
-          return `ProjectId:${doc_id}`
+          return `ProjectId:{${doc_id}}`
         },
         docsInProject({ project_id }) {
-          return `DocsIn:${project_id}`
+          return `DocsIn:{${project_id}}`
         },
         ranges({ doc_id }) {
-          return `Ranges:${doc_id}`
+          return `Ranges:{${doc_id}}`
         },
         // document-updater:realtime
         pendingUpdates({ doc_id }) {
-          return `PendingUpdates:${doc_id}`
+          return `PendingUpdates:{${doc_id}}`
         },
         // document-updater:history
         uncompressedHistoryOps({ doc_id }) {
-          return `UncompressedHistoryOps:${doc_id}`
+          return `UncompressedHistoryOps:{${doc_id}}`
         },
         docsWithHistoryOps({ project_id }) {
-          return `DocsWithHistoryOps:${project_id}`
+          return `DocsWithHistoryOps:{${project_id}}`
         },
         // document-updater:lock
         blockingKey({ doc_id }) {
-          return `Blocking:${doc_id}`
+          return `Blocking:{${doc_id}}`
         },
         // realtime
         clientsInProject({ project_id }) {
-          return `clients_in_project:${project_id}`
+          return `clients_in_project:{${project_id}}`
         },
         connectedUser({ project_id, client_id }) {
-          return `connected_user:${project_id}:${client_id}`
+          return `connected_user:{${project_id}}:${client_id}`
         },
       },
     }),
@@ -179,7 +179,7 @@ const settings = {
   // Server Config
   // -------------
 
-  // Where your instance of Overleaf Community Edition can be found publicly. This is used
+  // Where your instance of Lemma can be found publicly. This is used
   // when emails are sent out and in generated links:
   siteUrl: (siteUrl = process.env.OVERLEAF_SITE_URL || 'http://localhost'),
 
@@ -194,8 +194,8 @@ const settings = {
   maintenanceMessage: process.env.OVERLEAF_MAINTENANCE_MESSAGE,
   maintenanceMessageHTML: process.env.OVERLEAF_MAINTENANCE_MESSAGE_HTML,
 
-  // The name this is used to describe your Overleaf Community Edition Installation
-  appName: process.env.OVERLEAF_APP_NAME || 'Overleaf Community Edition',
+  // The name this is used to describe your Lemma Installation
+  appName: process.env.OVERLEAF_APP_NAME || 'Lemma',
 
   restrictInvitesToExistingAccounts:
     process.env.OVERLEAF_RESTRICT_INVITES_TO_EXISTING_ACCOUNTS === 'true',
@@ -204,12 +204,12 @@ const settings = {
     title:
       process.env.OVERLEAF_NAV_TITLE ||
       process.env.OVERLEAF_APP_NAME ||
-      'Overleaf Community Edition',
+      'Lemma',
   },
 
   // The email address which users will be directed to as the main point of
-  // contact for this installation of Overleaf Community Edition.
-  adminEmail: process.env.OVERLEAF_ADMIN_EMAIL || 'placeholder@example.com',
+  // contact for this installation of Lemma.
+  adminEmail: process.env.OVERLEAF_ADMIN_EMAIL || 'founders@lemmaforlatex.com',
 
   // If provided, a sessionSecret is used to sign cookies so that they cannot be
   // spoofed. This is recommended.
@@ -239,11 +239,11 @@ const settings = {
   // but should be set to true in production.
   cacheStaticAssets: true,
 
-  // If you are running Overleaf Community Edition over https, set this to true to send the
+  // If you are running Lemma over https, set this to true to send the
   // cookie with a secure flag (recommended).
   secureCookie: process.env.OVERLEAF_SECURE_COOKIE != null,
 
-  // If you are running Overleaf Community Edition behind a proxy (like Apache, Nginx, etc)
+  // If you are running Lemma behind a proxy (like Apache, Nginx, etc)
   // then set this to true to allow it to correctly detect the forwarded IP
   // address and http/https protocol information.
 
@@ -292,9 +292,40 @@ const settings = {
         10
       ),
     },
+    recurly: process.env.RECURLY_API_KEY
+      ? {
+          apiKey: process.env.RECURLY_API_KEY,
+          subdomain: process.env.RECURLY_SUBDOMAIN,
+          webhookUser: process.env.RECURLY_WEBHOOK_USER,
+          webhookPass: process.env.RECURLY_WEBHOOK_PASS,
+        }
+      : undefined,
   },
   references: {},
   notifications: undefined,
+
+  // Subscriptions
+  enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
+
+  // Google OAuth Configuration
+  oauthProviders: process.env.GOOGLE_CLIENT_ID
+    ? {
+        google: {
+          name: 'Google',
+          descriptionKey: 'login_with_service',
+          descriptionOptions: { service: 'Google' },
+          linkPath: '/auth/google',
+        },
+      }
+    : {},
+
+  googleOAuth: process.env.GOOGLE_CLIENT_ID
+    ? {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: (siteUrl || 'http://localhost') + '/auth/google/callback',
+      }
+    : undefined,
 
   defaultFeatures: {
     collaborators: -1,
@@ -305,6 +336,82 @@ const settings = {
     trackChanges: true,
     references: true,
   },
+
+  // Plan definitions for subscriptions
+  plans: [
+    {
+      planCode: 'personal',
+      name: 'Personal',
+      price_in_cents: 0,
+      features: {
+        collaborators: 1,
+        dropbox: false,
+        versioning: false,
+        compileTimeout: 60,
+        compileGroup: 'standard',
+        trackChanges: false,
+        references: false,
+      },
+    },
+    {
+      planCode: 'collaborator',
+      name: 'Standard',
+      price_in_cents: 1500,
+      features: {
+        collaborators: 10,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+    {
+      planCode: 'collaborator-annual',
+      name: 'Standard Annual',
+      price_in_cents: 12900,
+      annual: true,
+      features: {
+        collaborators: 10,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+    {
+      planCode: 'professional',
+      name: 'Professional',
+      price_in_cents: 3000,
+      features: {
+        collaborators: -1,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+    {
+      planCode: 'professional-annual',
+      name: 'Professional Annual',
+      price_in_cents: 25900,
+      annual: true,
+      features: {
+        collaborators: -1,
+        dropbox: true,
+        versioning: true,
+        compileTimeout: 180,
+        compileGroup: 'priority',
+        trackChanges: true,
+        references: true,
+      },
+    },
+  ],
 }
 
 // # OPTIONAL CONFIGURABLE SETTINGS
@@ -353,7 +460,7 @@ if (process.env.OVERLEAF_LOGIN_SUPPORT_TITLE != null) {
 // -------------
 //
 // You must configure a mail server to be able to send invite emails from
-// Overleaf Community Edition. The config settings are passed to nodemailer. See the nodemailer
+// Lemma. The config settings are passed to nodemailer. See the nodemailer
 // documentation for available options:
 //
 //     http://www.nodemailer.com/docs/transports
