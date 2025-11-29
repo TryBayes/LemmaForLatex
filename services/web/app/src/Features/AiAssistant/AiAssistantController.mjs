@@ -4,13 +4,18 @@ import SessionManager from '../Authentication/SessionManager.mjs'
 import ProjectGetter from '../Project/ProjectGetter.mjs'
 import ProjectLocator from '../Project/ProjectLocator.mjs'
 import ProjectEntityHandler from '../Project/ProjectEntityHandler.mjs'
+import ProjectEntityUpdateHandler from '../Project/ProjectEntityUpdateHandler.mjs'
 import DocumentUpdaterHandler from '../DocumentUpdater/DocumentUpdaterHandler.mjs'
+import EditorRealTimeController from '../Editor/EditorRealTimeController.mjs'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import { AiConversation } from '../../models/AiConversation.mjs'
 import { AiMessageCount } from '../../models/AiMessageCount.mjs'
 import UserGetter from '../User/UserGetter.mjs'
 import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
+import CompileManager from '../Compile/CompileManager.mjs'
+import { parseLatexLog } from './LatexLogParser.mjs'
+import { fetchStream } from '@overleaf/fetch-utils'
 
 // Check if user has reached their AI message limit
 async function checkMessageLimit(userId) {
@@ -49,21 +54,89 @@ async function checkMessageLimit(userId) {
 }
 
 // System prompt for the LaTeX assistant
-const SYSTEM_PROMPT = `You are an expert LaTeX assistant integrated into Lemma, a collaborative LaTeX editor. Your role is to help users with their LaTeX documents.
+const SYSTEM_PROMPT = `You are Lemma, an expert LaTeX assistant built into a collaborative LaTeX editor. You help researchers, students, and academics write, edit, and debug LaTeX documents with precision and efficiency.
 
-You have access to tools that let you:
-1. List all files in the current project
-2. Read the content of any file
-3. Edit files by replacing specific content
+<identity>
+- You ARE Lemma - refer to yourself as Lemma when relevant
+- You are fast, accurate, and direct
+- You are an expert in LaTeX, academic writing, and document preparation
+- You never use emojis or unicode symbols (arrows, checkmarks, bullets, etc.) unless explicitly requested - use plain ASCII text
+</identity>
 
-When helping users:
-- Be concise and helpful
-- When editing files, always read the file first to understand its current state
-- Explain what changes you're making and why
-- If you encounter errors, explain them clearly
-- For LaTeX-specific questions, provide examples when helpful
+<tools>
+You have five tools:
 
-Always use the tools when the user asks about their document or wants to make changes. Don't assume you know the document content - read it first.`
+1. **list_files** - List all files/folders in the project
+2. **read_file** - Read the content of any document file (.tex, .bib, .sty, etc.)
+3. **edit_file** - Replace specific content in a file
+4. **create_file** - Create a new file in the project (or overwrite an existing one)
+5. **get_compile_errors** - Compile the project and get errors, warnings, and log output
+
+### Smart Tool Usage
+
+**When to use list_files:**
+- Only when you genuinely don't know the project structure
+- When the user asks about files you haven't seen
+- NOT needed if user mentions a specific file (e.g., "edit main.tex") - just read that file directly
+
+**When to use read_file:**
+- Before editing a file you haven't seen in this conversation
+- When the user asks about content you don't know
+- NOT needed if the file content was already shown to you recently in this conversation
+- NOT needed for simple additions where location is clear (e.g., "add this package" - you know it goes in the preamble)
+
+**When to use edit_file:**
+- Match the EXACT text including whitespace and line breaks
+- If an edit fails, re-read the file and try again
+
+**When to use create_file:**
+- To create new .tex, .bib, .sty, or other text-based files
+- Parent folders are created automatically if they don't exist
+- Will overwrite existing file if one exists at that path, so check first if needed
+
+**When to use get_compile_errors (IMPORTANT):**
+- Run this after making edits to verify they compile correctly
+- Run it when the user reports a compilation error
+- Run it when debugging LaTeX issues
+- This is your feedback loop - use it to catch mistakes before the user does
+</tools>
+
+<communication>
+- Be concise and direct - no filler phrases or unnecessary pleasantries
+- Get to the point immediately
+- When explaining changes, be brief but clear
+- Use LaTeX code blocks with \`\`\`latex syntax highlighting
+- For inline LaTeX, use backticks: \`\\command{arg}\`
+- Only explain concepts if the user seems unfamiliar or asks for explanation
+- If something is unclear, ask a focused clarifying question rather than guessing
+</communication>
+
+<latex_expertise>
+When helping with LaTeX:
+- Provide working, tested solutions - not hypothetical code
+- Consider document class compatibility (article, report, book, beamer, etc.)
+- Suggest appropriate packages when needed, with brief rationale
+- For complex structures (tables, figures, equations), offer the most standard approach first
+- Debug compilation errors by identifying the exact issue and fix
+- Respect the user's existing document style and conventions
+</latex_expertise>
+
+<editing_guidelines>
+When making document changes:
+- Make minimal, targeted edits - don't refactor unrelated code
+- Preserve the user's formatting style and indentation
+- For multi-step changes, complete them efficiently without unnecessary back-and-forth
+- After editing, run get_compile_errors to verify the changes compile - this is critical
+- If compilation fails, fix the errors immediately before reporting success to the user
+- If a request is ambiguous about WHERE to make a change, ask before editing
+</editing_guidelines>
+
+<accuracy>
+- Verify information before stating it as fact
+- If you're uncertain about a LaTeX package or command, say so
+- Don't invent package names or command syntax
+- When debugging, trace the actual error - don't guess at causes
+</accuracy>`
 
 /**
  * Stream chat completion with AI assistant
@@ -409,6 +482,210 @@ function createProjectTools(projectId, userId) {
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error editing file')
           return { error: error.message }
+        }
+      },
+    }),
+
+    create_file: tool({
+      description:
+        'Create a new file in the project with the specified content. Parent folders will be created automatically if they do not exist. If a file already exists at the path, it will be overwritten.',
+      inputSchema: z.object({
+        path: z.string().describe('The file path relative to project root, e.g., "chapters/intro.tex" or "references.bib"'),
+        content: z.string().describe('The content to write to the file'),
+      }),
+      execute: async ({ path, content }) => {
+        try {
+          // Normalize path - remove leading slash if present
+          const normalizedPath = path.startsWith('/') ? path.slice(1) : path
+
+          // Split content into lines for the document
+          const docLines = content.split('\n')
+
+          // Check if this is a root-level file (no directory component)
+          const isRootFile = !normalizedPath.includes('/')
+
+          let doc, isNew, newFolders = [], folderId
+
+          if (isRootFile) {
+            // For root-level files, get the project and use upsertDoc with root folder
+            const project = await ProjectGetter.promises.getProject(projectId, {
+              rootFolder: true,
+            })
+            if (!project) {
+              return { error: 'Project not found' }
+            }
+            folderId = project.rootFolder[0]._id
+            const result = await ProjectEntityUpdateHandler.promises.upsertDoc(
+              projectId,
+              folderId,
+              normalizedPath,
+              docLines,
+              'ai-assistant',
+              userId
+            )
+            doc = result.doc
+            isNew = result.isNew
+          } else {
+            // For files in subdirectories, use upsertDocWithPath which creates folders
+            const result = await ProjectEntityUpdateHandler.promises.upsertDocWithPath(
+              projectId,
+              normalizedPath,
+              docLines,
+              'ai-assistant',
+              userId
+            )
+            doc = result.doc
+            isNew = result.isNew
+            newFolders = result.newFolders || []
+            folderId = result.folder?._id
+          }
+
+          // Emit real-time events so the UI updates without refresh
+          // First emit any new folders that were created
+          for (const folder of newFolders) {
+            EditorRealTimeController.emitToRoom(
+              projectId,
+              'reciveNewFolder',
+              folder.parentFolder_id,
+              folder,
+              userId
+            )
+          }
+
+          // Then emit the new document event if it was newly created
+          if (isNew) {
+            EditorRealTimeController.emitToRoom(
+              projectId,
+              'reciveNewDoc',
+              folderId,
+              doc,
+              'ai-assistant',
+              userId
+            )
+          }
+
+          const resultObj = {
+            success: true,
+            path: normalizedPath,
+            docId: doc._id.toString(),
+            isNew,
+            foldersCreated: newFolders.length,
+            lineCount: docLines.length,
+            message: isNew 
+              ? `File "${normalizedPath}" created successfully` 
+              : `File "${normalizedPath}" updated successfully`,
+          }
+          return resultObj
+        } catch (error) {
+          logger.error({ err: error, projectId, path }, 'Error creating file')
+          return { error: error.message }
+        }
+      },
+    }),
+
+    get_compile_errors: tool({
+      description:
+        'Compile the LaTeX project and get all errors, warnings, and typesetting issues. Use this to check if your edits compile correctly and to diagnose compilation problems.',
+      inputSchema: z.object({
+        include_typesetting: z.boolean().optional().describe('Include typesetting warnings (overfull/underfull boxes). Default: false'),
+      }),
+      execute: async ({ include_typesetting = false }) => {
+        try {
+          // Trigger compilation
+          const {
+            status,
+            outputFiles,
+            clsiServerId,
+            validationProblems,
+            buildId,
+          } = await CompileManager.promises.compile(projectId, userId, {})
+
+          // Check for validation problems first
+          if (validationProblems && Object.keys(validationProblems).length > 0) {
+            return {
+              success: false,
+              status: 'validation-error',
+              validationProblems,
+              message: 'Project has validation problems that prevent compilation',
+            }
+          }
+
+          // Check compile status
+          if (status !== 'success') {
+            // Try to find and parse the log file even on failure
+            const logFile = outputFiles?.find(f => f.path === 'output.log')
+            let parsedErrors = null
+
+            if (logFile && buildId) {
+              try {
+                const logUrl = `${Settings.apis.clsi.url}/project/${projectId}/user/${userId}/build/${buildId}/output/output.log`
+                const logStream = await fetchStream(logUrl, {
+                  signal: AbortSignal.timeout(30000),
+                })
+                const chunks = []
+                for await (const chunk of logStream) {
+                  chunks.push(chunk)
+                }
+                const logText = Buffer.concat(chunks).toString('utf-8')
+                parsedErrors = parseLatexLog(logText, { ignoreDuplicates: true })
+              } catch (logError) {
+                logger.warn({ err: logError, projectId }, 'Failed to fetch compilation log')
+              }
+            }
+
+            return {
+              success: false,
+              status,
+              errors: parsedErrors?.errors || [],
+              warnings: parsedErrors?.warnings || [],
+              typesetting: include_typesetting ? (parsedErrors?.typesetting || []) : [],
+              message: `Compilation failed with status: ${status}`,
+              errorCount: parsedErrors?.errors?.length || 0,
+              warningCount: parsedErrors?.warnings?.length || 0,
+            }
+          }
+
+          // Compilation succeeded - fetch and parse the log for warnings
+          const logFile = outputFiles?.find(f => f.path === 'output.log')
+          let parsedLog = { errors: [], warnings: [], typesetting: [] }
+
+          if (logFile && buildId) {
+            try {
+              const logUrl = `${Settings.apis.clsi.url}/project/${projectId}/user/${userId}/build/${buildId}/output/output.log`
+              const logStream = await fetchStream(logUrl, {
+                signal: AbortSignal.timeout(30000),
+              })
+              const chunks = []
+              for await (const chunk of logStream) {
+                chunks.push(chunk)
+              }
+              const logText = Buffer.concat(chunks).toString('utf-8')
+              parsedLog = parseLatexLog(logText, { ignoreDuplicates: true })
+            } catch (logError) {
+              logger.warn({ err: logError, projectId }, 'Failed to fetch compilation log')
+            }
+          }
+
+          // Check if PDF was generated
+          const pdfFile = outputFiles?.find(f => f.path === 'output.pdf')
+
+          return {
+            success: true,
+            status: 'success',
+            pdfGenerated: !!pdfFile,
+            errors: parsedLog.errors,
+            warnings: parsedLog.warnings,
+            typesetting: include_typesetting ? parsedLog.typesetting : [],
+            errorCount: parsedLog.errors.length,
+            warningCount: parsedLog.warnings.length,
+            typesettingCount: parsedLog.typesetting.length,
+            message: pdfFile
+              ? `Compilation successful! PDF generated with ${parsedLog.errors.length} errors, ${parsedLog.warnings.length} warnings.`
+              : 'Compilation completed but no PDF was generated.',
+          }
+        } catch (error) {
+          logger.error({ err: error, projectId }, 'Error compiling project')
+          return { error: error.message, success: false }
         }
       },
     }),
