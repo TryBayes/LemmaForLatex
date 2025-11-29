@@ -3,6 +3,7 @@ import PermissionsController from '../Authorization/PermissionsController.mjs'
 import SubscriptionController from './SubscriptionController.mjs'
 import SubscriptionGroupController from './SubscriptionGroupController.mjs'
 import TeamInvitesController from './TeamInvitesController.mjs'
+import StripeController from './StripeController.mjs'
 import { RateLimiter } from '../../infrastructure/RateLimiter.mjs'
 import RateLimiterMiddleware from '../Security/RateLimiterMiddleware.mjs'
 import Settings from '@overleaf/settings'
@@ -249,6 +250,28 @@ export default {
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
       SubscriptionController.updateAccountEmailAddress
+    )
+
+    // Stripe routes
+    webRouter.post(
+      '/user/subscription/stripe/create-checkout-session',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
+      StripeController.createCheckoutSession
+    )
+
+    webRouter.post(
+      '/user/subscription/stripe/create-portal-session',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
+      StripeController.createPortalSession
+    )
+
+    webRouter.post(
+      '/user/subscription/stripe/cancel',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
+      StripeController.cancelSubscription
     )
   },
 }

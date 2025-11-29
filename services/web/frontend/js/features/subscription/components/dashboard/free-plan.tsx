@@ -31,7 +31,7 @@ function FreePlan() {
           <li className="mb-1">✓ Priority support</li>
         </ul>
         <p className="mb-2 text-muted">
-          <strong>$20/month</strong> or <strong>$200/year</strong> (save 17%)
+          <strong>$20/month</strong> — Cancel anytime
         </p>
         <a className="btn btn-primary" href="/user/subscription/plans">
           Upgrade to Pro

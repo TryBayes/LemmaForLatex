@@ -1,0 +1,11 @@
+extends ../layout-react
+
+block entrypointVar
+	- entrypoint = 'pages/user/subscription/stripe-success'
+
+block append meta
+	meta(name='ol-planName' content=planName)
+
+block content
+	main#stripe-success-root.content.content-alt
+

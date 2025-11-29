@@ -307,6 +307,16 @@ const settings = {
   // Subscriptions
   enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
 
+  // Stripe Configuration
+  stripe: process.env.STRIPE_SECRET_KEY
+    ? {
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+        proPriceId: process.env.STRIPE_PRO_PRICE_ID, // Monthly $20 price ID
+      }
+    : undefined,
+
   // Google OAuth Configuration
   oauthProviders: process.env.GOOGLE_CLIENT_ID
     ? {
@@ -359,22 +369,6 @@ const settings = {
       planCode: 'pro',
       name: 'Lemma Pro',
       price_in_cents: 2000, // $20/month
-      features: {
-        collaborators: -1,
-        dropbox: true,
-        versioning: true,
-        compileTimeout: parseIntOrFail(process.env.COMPILE_TIMEOUT || 180),
-        compileGroup: 'priority',
-        trackChanges: true,
-        references: true,
-        aiMessagesPerWeek: -1, // Unlimited AI messages
-      },
-    },
-    {
-      planCode: 'pro-annual',
-      name: 'Lemma Pro Annual',
-      price_in_cents: 20000, // $200/year (save ~17%)
-      annual: true,
       features: {
         collaborators: -1,
         dropbox: true,

@@ -455,6 +455,17 @@ module.exports = {
       }
     : undefined,
   enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
+
+  // Stripe Configuration
+  stripe: process.env.STRIPE_SECRET_KEY
+    ? {
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+        proPriceId: process.env.STRIPE_PRO_PRICE_ID,
+      }
+    : undefined,
+
   restrictedCountries: [],
   enableOnboardingEmails: process.env.ENABLE_ONBOARDING_EMAILS === 'true',
 

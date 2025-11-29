@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import getMeta from '@/utils/meta'
 import MaterialIcon from '@/shared/components/material-icon'
+import { postJSON } from '@/infrastructure/fetch-json'
 
 interface PlansPageData {
   currentPlan: string
@@ -9,6 +10,7 @@ interface PlansPageData {
   weeklyMessages: number
   weeklyLimit: number
   remaining: number
+  stripePublishableKey: string | null
 }
 
 function CheckIcon() {
@@ -22,6 +24,8 @@ function CheckIcon() {
 export default function PlansPage() {
   const { t } = useTranslation()
   const data = getMeta('ol-plansPageData') as PlansPageData | undefined
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const currentPlan = data?.currentPlan || 'free'
   const hasPaidPlan = data?.hasPaidPlan || false
@@ -30,6 +34,42 @@ export default function PlansPage() {
   const remaining = data?.remaining ?? (weeklyLimit - weeklyMessages)
 
   const isLimitReached = !hasPaidPlan && remaining <= 0
+
+  const handleUpgradeClick = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await postJSON('/user/subscription/stripe/create-checkout-session')
+      if (response.url) {
+        window.location.href = response.url
+      } else {
+        setError('Failed to create checkout session')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to start checkout')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleManageSubscription = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await postJSON('/user/subscription/stripe/create-portal-session')
+      if (response.url) {
+        window.location.href = response.url
+      } else {
+        setError('Failed to open subscription management')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to open subscription management')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="plans-page">
@@ -133,7 +173,7 @@ export default function PlansPage() {
                 <span className="plan-price-period">/month</span>
               </div>
               <p className="plan-price-note">
-                or $200/year <span className="plan-savings">(save 17%)</span>
+                Cancel anytime
               </p>
             </div>
             
@@ -160,20 +200,25 @@ export default function PlansPage() {
             </div>
 
             <div className="plan-card-footer">
+              {error && (
+                <p className="plan-error">{error}</p>
+              )}
               {hasPaidPlan ? (
-                <a href="/user/subscription" className="plan-button plan-button-primary">
-                  Manage subscription
-                </a>
+                <button 
+                  onClick={handleManageSubscription}
+                  className="plan-button plan-button-primary"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Loading...' : 'Manage subscription'}
+                </button>
               ) : (
-                <>
-                  <a 
-                    href="mailto:founders@lemmaforlatex.com?subject=Upgrade%20to%20Lemma%20Pro&body=Hi%2C%20I'd%20like%20to%20upgrade%20to%20Lemma%20Pro." 
-                    className="plan-button plan-button-primary"
-                  >
-                    Upgrade to Pro
-                  </a>
-                  <p className="plan-cta-note">Contact us to get started</p>
-                </>
+                <button 
+                  onClick={handleUpgradeClick}
+                  className="plan-button plan-button-primary"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Loading...' : 'Upgrade to Pro'}
+                </button>
               )}
             </div>
           </div>

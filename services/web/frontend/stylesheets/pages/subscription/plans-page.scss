@@ -292,14 +292,20 @@
   background-color: var(--green-50);
   color: white;
   
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--green-60);
     color: white;
     text-decoration: none;
   }
   
-  &:active {
+  &:active:not(:disabled) {
     background-color: var(--green-70);
+  }
+  
+  &:disabled {
+    background-color: var(--green-30);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: not-allowed;
   }
 }
 
@@ -323,6 +329,15 @@
   font-size: var(--font-size-01);
   color: var(--content-secondary);
   margin: var(--spacing-03) 0 0;
+}
+
+.plan-error {
+  font-size: var(--font-size-02);
+  color: var(--red-50);
+  margin: 0 0 var(--spacing-03);
+  padding: var(--spacing-02) var(--spacing-03);
+  background-color: var(--red-10);
+  border-radius: var(--border-radius-base-01);
 }
 
 // FAQ Section

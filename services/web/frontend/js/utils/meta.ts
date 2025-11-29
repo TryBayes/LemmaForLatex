@@ -225,6 +225,7 @@ export interface Meta {
     weeklyMessages: number
     weeklyLimit: number
     remaining: number
+    stripePublishableKey: string | null
   }
   'ol-portalTemplates': PortalTemplate[]
   'ol-postCheckoutRedirect': string
