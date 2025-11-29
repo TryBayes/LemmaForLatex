@@ -304,14 +304,6 @@ const settings = {
   references: {},
   notifications: undefined,
 
-  // AI Assistant Configuration
-  ai: process.env.AI_GATEWAY_API_KEY
-    ? {
-        model: process.env.AI_MODEL || 'anthropic/claude-sonnet-4-20250514',
-        apiKey: process.env.AI_GATEWAY_API_KEY,
-      }
-    : undefined,
-
   // Subscriptions
   enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
 
