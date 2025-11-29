@@ -693,25 +693,93 @@
     }
   }
   
-  code {
-    background-color: var(--bg-dark-secondary);
-    color: var(--content-primary-dark);
-    padding: 0.1em 0.3em;
-    border-radius: var(--border-radius-small);
-    font-family: var(--font-family-monospace);
-    font-size: 0.9em;
+  // Inline code styling
+  .assistant-inline-code {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: #d63384;
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    font-size: 0.85em;
+    font-weight: 500;
   }
   
+  // Code block container with header
+  .assistant-code-block {
+    margin: var(--spacing-06) calc(-1 * var(--spacing-05));
+    margin-bottom: calc(-1 * var(--spacing-04));
+    border-radius: 0 0 var(--border-radius-large) var(--border-radius-base);
+    overflow: hidden;
+    
+    &:first-child {
+      margin-top: calc(-1 * var(--spacing-04));
+      border-radius: var(--border-radius-large) var(--border-radius-large) var(--border-radius-large) var(--border-radius-base);
+    }
+    
+    &:not(:last-child) {
+      margin-bottom: var(--spacing-02);
+      border-radius: 0;
+    }
+    
+    &:only-child {
+      margin: calc(-1 * var(--spacing-04)) calc(-1 * var(--spacing-05));
+      border-radius: var(--border-radius-large) var(--border-radius-large) var(--border-radius-large) var(--border-radius-base);
+    }
+    
+    .assistant-code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background-color: #21252b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .assistant-code-language {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .assistant-code-copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+      }
+      
+      .material-symbols {
+        font-size: 16px;
+      }
+    }
+  }
+  
+  // Legacy pre/code styling (fallback)
   pre {
-    background-color: var(--bg-dark-secondary);
+    background-color: #282c34;
     padding: var(--spacing-03);
-    border-radius: var(--border-radius-base);
+    border-radius: 8px;
     overflow-x: auto;
     margin: var(--spacing-02) 0;
     
     code {
       background: none;
       padding: 0;
+      color: #abb2bf;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
     }
   }
   

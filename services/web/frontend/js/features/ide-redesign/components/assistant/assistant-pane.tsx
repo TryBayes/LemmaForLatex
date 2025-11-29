@@ -1,6 +1,6 @@
 import { FullSizeLoadingSpinner } from '@/shared/components/loading-spinner'
 import MaterialIcon from '@/shared/components/material-icon'
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import classNames from 'classnames'
 import {
   useAiAssistant,
@@ -10,6 +10,8 @@ import {
   Conversation,
 } from './use-ai-assistant'
 import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
 
@@ -258,7 +260,7 @@ function MessageList({ messages }: { messages: Message[] }) {
         return (
           <li key={message.id} className="assistant-message assistant-message-ai">
             <div className="assistant-message-content">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+              <ReactMarkdown components={markdownComponents}>{message.content}</ReactMarkdown>
             </div>
           </li>
         )
@@ -278,7 +280,7 @@ function MessageParts({ parts }: { parts: MessagePart[] }) {
           return (
             <li key={`text-${index}`} className="assistant-message assistant-message-ai">
               <div className="assistant-message-content">
-                <ReactMarkdown>{part.content}</ReactMarkdown>
+                <ReactMarkdown components={markdownComponents}>{part.content}</ReactMarkdown>
               </div>
             </li>
           )
@@ -327,6 +329,72 @@ function formatToolName(name: string): string {
   return name
     .replace(/_/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase())
+}
+
+// Custom code block with syntax highlighting
+function CodeBlock({
+  inline,
+  className,
+  children,
+  ...props
+}: {
+  inline?: boolean
+  className?: string
+  children?: React.ReactNode
+}) {
+  const [copied, setCopied] = useState(false)
+  const match = /language-(\w+)/.exec(className || '')
+  const language = match ? match[1] : ''
+  const codeString = String(children).replace(/\n$/, '')
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(codeString)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [codeString])
+
+  if (inline) {
+    return (
+      <code className="assistant-inline-code" {...props}>
+        {children}
+      </code>
+    )
+  }
+
+  return (
+    <div className="assistant-code-block">
+      <div className="assistant-code-header">
+        <span className="assistant-code-language">{language || 'code'}</span>
+        <button
+          type="button"
+          className="assistant-code-copy"
+          onClick={handleCopy}
+          title={copied ? 'Copied!' : 'Copy code'}
+        >
+          <MaterialIcon type={copied ? 'check' : 'content_copy'} />
+        </button>
+      </div>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={language || 'text'}
+        PreTag="div"
+        customStyle={{
+          margin: 0,
+          borderRadius: '0 0 8px 8px',
+          fontSize: '13px',
+          lineHeight: '1.5',
+        }}
+        {...props}
+      >
+        {codeString}
+      </SyntaxHighlighter>
+    </div>
+  )
+}
+
+// Markdown components with syntax highlighting
+const markdownComponents = {
+  code: CodeBlock,
 }
 
 // Available models for Vercel AI Gateway
