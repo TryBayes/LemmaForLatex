@@ -9,6 +9,44 @@ import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import { AiConversation } from '../../models/AiConversation.mjs'
 import { AiMessageCount } from '../../models/AiMessageCount.mjs'
+import UserGetter from '../User/UserGetter.mjs'
+import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
+
+// Check if user has reached their AI message limit
+async function checkMessageLimit(userId) {
+  try {
+    // Check if user has a paid subscription
+    const subscription = await SubscriptionLocator.promises.getUsersSubscription(userId)
+    
+    // If user has an active paid subscription, they have unlimited messages
+    if (subscription && subscription.planCode && subscription.planCode !== 'free') {
+      return { allowed: true, remaining: -1, limit: -1 }
+    }
+    
+    // Get the weekly limit from settings
+    const weeklyLimit = Settings.aiMessageLimits?.freeMessagesPerWeek || 5
+    
+    // Get user's current weekly count
+    const { weeklyMessages } = await AiMessageCount.getWeeklyCount(userId)
+    
+    const remaining = weeklyLimit - weeklyMessages
+    
+    if (remaining <= 0) {
+      return { 
+        allowed: false, 
+        remaining: 0, 
+        limit: weeklyLimit,
+        message: `You've used all ${weeklyLimit} free AI messages this week. Upgrade to Lemma Pro for unlimited AI assistance.`
+      }
+    }
+    
+    return { allowed: true, remaining, limit: weeklyLimit }
+  } catch (error) {
+    logger.error({ err: error, userId }, 'Error checking message limit')
+    // On error, allow the message but log it
+    return { allowed: true, remaining: -1, limit: -1 }
+  }
+}
 
 // System prompt for the LaTeX assistant
 const SYSTEM_PROMPT = `You are an expert LaTeX assistant integrated into Lemma, a collaborative LaTeX editor. Your role is to help users with their LaTeX documents.
@@ -41,6 +79,18 @@ async function chat(req, res) {
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Messages array is required' })
+  }
+
+  // Check message limit before processing
+  const limitCheck = await checkMessageLimit(userId)
+  if (!limitCheck.allowed) {
+    return res.status(429).json({ 
+      error: 'message_limit_reached',
+      message: limitCheck.message,
+      remaining: limitCheck.remaining,
+      limit: limitCheck.limit,
+      upgradeUrl: '/user/subscription/plans'
+    })
   }
 
   try {
@@ -174,15 +224,8 @@ async function chat(req, res) {
         res.write(`data: ${JSON.stringify({ type: 'conversation_id', data: newConversation._id.toString() })}\n\n`)
       }
 
-      // Increment user's message count
-      await AiMessageCount.findOneAndUpdate(
-        { userId },
-        {
-          $inc: { totalMessages: 1 },
-          $set: { lastMessageAt: new Date() },
-        },
-        { upsert: true }
-      )
+      // Increment user's message count (both total and weekly)
+      await AiMessageCount.incrementWeeklyCount(userId)
       console.log('[AI Assistant] Saved conversation and incremented message count')
     } catch (saveError) {
       logger.error({ err: saveError, projectId, userId }, 'Error saving AI conversation')
@@ -540,9 +583,22 @@ async function getMessageCount(req, res) {
   }
 
   try {
+    // Check subscription status
+    const subscription = await SubscriptionLocator.promises.getUsersSubscription(userId)
+    const hasPaidPlan = subscription && subscription.planCode && subscription.planCode !== 'free'
+    
+    // Get weekly count
+    const { weeklyMessages, weekStartDate } = await AiMessageCount.getWeeklyCount(userId)
+    const weeklyLimit = hasPaidPlan ? -1 : (Settings.aiMessageLimits?.freeMessagesPerWeek || 5)
+    
     const countDoc = await AiMessageCount.findOne({ userId })
     res.json({
       totalMessages: countDoc?.totalMessages || 0,
+      weeklyMessages,
+      weeklyLimit,
+      remaining: weeklyLimit === -1 ? -1 : Math.max(0, weeklyLimit - weeklyMessages),
+      weekStartDate,
+      hasPaidPlan,
       lastMessageAt: countDoc?.lastMessageAt || null,
     })
   } catch (error) {

@@ -362,6 +362,38 @@ async function userSubscriptionPage(req, res) {
   res.render('subscriptions/dashboard-react', data)
 }
 
+/**
+ * Lemma Pro plans page
+ */
+async function plansPage(req, res) {
+  const user = SessionManager.getSessionUser(req.session)
+  if (!user) {
+    throw new Error('User is not logged in')
+  }
+
+  // Get user's current subscription status
+  const subscription = await SubscriptionLocator.promises.getUsersSubscription(user._id)
+  const hasPaidPlan = subscription && subscription.planCode && subscription.planCode !== 'free'
+
+  // Get AI message count
+  const { AiMessageCount } = await import('../../models/AiMessageCount.mjs')
+  const { weeklyMessages } = await AiMessageCount.getWeeklyCount(user._id)
+  const weeklyLimit = Settings.aiMessageLimits?.freeMessagesPerWeek || 5
+
+  const plans = Settings.plans || []
+
+  res.render('subscriptions/plans', {
+    title: 'Upgrade to Lemma Pro',
+    user: sanitizeSessionUserForFrontEnd(user),
+    plans,
+    currentPlan: hasPaidPlan ? subscription.planCode : 'free',
+    hasPaidPlan,
+    weeklyMessages,
+    weeklyLimit,
+    remaining: hasPaidPlan ? -1 : Math.max(0, weeklyLimit - weeklyMessages),
+  })
+}
+
 async function successfulSubscription(req, res) {
   const user = SessionManager.getSessionUser(req.session)
   if (!user) {
@@ -1177,6 +1209,7 @@ function makeChangePreview(
 
 export default {
   userSubscriptionPage: expressify(userSubscriptionPage),
+  plansPage: expressify(plansPage),
   successfulSubscription: expressify(successfulSubscription),
   cancelSubscription,
   pauseSubscription,

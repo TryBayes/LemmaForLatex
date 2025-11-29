@@ -454,7 +454,7 @@ module.exports = {
         apiKey: process.env.AI_GATEWAY_API_KEY,
       }
     : undefined,
-  enableSubscriptions: false,
+  enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
   restrictedCountries: [],
   enableOnboardingEmails: process.env.ENABLE_ONBOARDING_EMAILS === 'true',
 

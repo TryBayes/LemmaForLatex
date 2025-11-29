@@ -1,0 +1,19 @@
+extends ../layout-react
+
+block entrypointVar
+	- entrypoint = 'pages/user/subscription/plans'
+
+block append meta
+	-
+		var plansPageData = {
+			currentPlan: currentPlan,
+			hasPaidPlan: hasPaidPlan,
+			weeklyMessages: weeklyMessages,
+			weeklyLimit: weeklyLimit,
+			remaining: remaining
+		}
+	meta(name='ol-plansPageData' data-type='json' content=plansPageData)
+
+block content
+	main.content.content-alt
+		#plans-page-root

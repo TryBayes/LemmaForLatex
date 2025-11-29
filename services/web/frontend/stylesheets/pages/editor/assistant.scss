@@ -800,3 +800,42 @@
     font-style: italic;
   }
 }
+
+// Usage badge for free users
+.assistant-usage-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--spacing-02);
+  padding: 2px 8px;
+  background-color: var(--bg-light-secondary, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--content-secondary);
+}
+
+// Limit reached styling
+.assistant-limit-reached {
+  background: linear-gradient(135deg, #ff9800 0%, #f44336 100%) !important;
+  color: white !important;
+  
+  .material-symbols {
+    color: white !important;
+  }
+}
+
+.assistant-limit-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-02);
+  
+  span {
+    font-weight: 500;
+  }
+  
+  .btn {
+    font-size: 12px;
+    padding: 4px 12px;
+  }
+}

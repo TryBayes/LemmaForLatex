@@ -67,6 +67,9 @@ export function useAiAssistant() {
   const [error, setError] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL)
   const [messageCount, setMessageCount] = useState<number>(0)
+  const [weeklyLimit, setWeeklyLimit] = useState<number>(5)
+  const [remaining, setRemaining] = useState<number>(5)
+  const [hasPaidPlan, setHasPaidPlan] = useState<boolean>(false)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
@@ -96,7 +99,7 @@ export function useAiAssistant() {
     loadConversations()
   }, [projectId])
 
-  // Load message count on mount
+  // Load message count and usage info on mount
   useEffect(() => {
     const loadMessageCount = async () => {
       try {
@@ -106,6 +109,9 @@ export function useAiAssistant() {
         if (response.ok) {
           const data = await response.json()
           setMessageCount(data.totalMessages || 0)
+          setWeeklyLimit(data.weeklyLimit ?? 5)
+          setRemaining(data.remaining ?? 5)
+          setHasPaidPlan(data.hasPaidPlan || false)
         }
       } catch (err) {
         console.error('[AI Assistant] Failed to load message count:', err)
@@ -244,6 +250,13 @@ export function useAiAssistant() {
         })
 
         if (!response.ok) {
+          // Check for message limit error
+          if (response.status === 429) {
+            const errorData = await response.json()
+            if (errorData.error === 'message_limit_reached') {
+              throw new Error(`${errorData.message} [LIMIT_REACHED]`)
+            }
+          }
           throw new Error(`HTTP error! status: ${response.status}`)
         }
 
@@ -363,6 +376,10 @@ export function useAiAssistant() {
                     console.log('[AI Assistant Frontend] Done event received')
                     // Stream complete - increment local message count
                     setMessageCount((prev: number) => prev + 1)
+                    // Decrement remaining for free users
+                    if (!hasPaidPlan) {
+                      setRemaining((prev: number) => Math.max(0, prev - 1))
+                    }
                     break
                 }
               } catch (parseError) {
@@ -395,7 +412,7 @@ export function useAiAssistant() {
         setIsLoading(false)
       }
     },
-    [projectId, messages, selectedModel, currentConversationId]
+    [projectId, messages, selectedModel, currentConversationId, hasPaidPlan]
   )
 
   const stopGeneration = useCallback(() => {
@@ -414,6 +431,9 @@ export function useAiAssistant() {
     selectedModel,
     setSelectedModel,
     messageCount,
+    weeklyLimit,
+    remaining,
+    hasPaidPlan,
     conversations,
     currentConversationId,
     loadConversation,

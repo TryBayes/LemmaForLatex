@@ -25,6 +25,9 @@ export const AssistantPane = () => {
     setSelectedModel,
     selectedModel,
     messageCount,
+    weeklyLimit,
+    remaining,
+    hasPaidPlan,
     conversations,
     currentConversationId,
     loadConversation,
@@ -33,6 +36,9 @@ export const AssistantPane = () => {
     showHistory,
     setShowHistory,
   } = useAiAssistant()
+
+  // Check if error is due to message limit
+  const isLimitReached = error?.includes('[LIMIT_REACHED]')
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -68,6 +74,11 @@ export const AssistantPane = () => {
             <div className="assistant-header-left">
               <MaterialIcon type="smart_toy" />
               <span className="assistant-header-title">AI Assistant</span>
+              {!hasPaidPlan && weeklyLimit > 0 && (
+                <span className="assistant-usage-badge" title="AI messages remaining this week">
+                  {remaining}/{weeklyLimit}
+                </span>
+              )}
             </div>
             <div className="assistant-header-right">
               <button
@@ -118,9 +129,18 @@ export const AssistantPane = () => {
                     </div>
                   )}
                   {error && (
-                    <div className="assistant-error">
-                      <MaterialIcon type="error" />
-                      <span>{error}</span>
+                    <div className={classNames('assistant-error', { 'assistant-limit-reached': isLimitReached })}>
+                      <MaterialIcon type={isLimitReached ? 'warning' : 'error'} />
+                      {isLimitReached ? (
+                        <div className="assistant-limit-message">
+                          <span>You've used all your free AI messages this week.</span>
+                          <a href="/user/subscription/plans" className="btn btn-sm btn-primary mt-2">
+                            Upgrade to Pro
+                          </a>
+                        </div>
+                      ) : (
+                        <span>{error}</span>
+                      )}
                     </div>
                   )}
                   <div ref={messagesEndRef} />
