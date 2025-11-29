@@ -610,28 +610,32 @@ function createProjectTools(projectId, userId) {
             }
           }
 
+          // Helper to fetch and parse the log file
+          const fetchAndParseLog = async (logFile) => {
+            if (!logFile?.url) return null
+            try {
+              // Use the URL from outputFiles which correctly handles per-user vs anonymous compiles
+              const logUrl = `${Settings.apis.clsi.url}${logFile.url}`
+              const logStream = await fetchStream(logUrl, {
+                signal: AbortSignal.timeout(30000),
+              })
+              const chunks = []
+              for await (const chunk of logStream) {
+                chunks.push(chunk)
+              }
+              const logText = Buffer.concat(chunks).toString('utf-8')
+              return parseLatexLog(logText, { ignoreDuplicates: true })
+            } catch (logError) {
+              logger.warn({ err: logError, projectId, logUrl: logFile.url }, 'Failed to fetch compilation log')
+              return null
+            }
+          }
+
           // Check compile status
           if (status !== 'success') {
             // Try to find and parse the log file even on failure
             const logFile = outputFiles?.find(f => f.path === 'output.log')
-            let parsedErrors = null
-
-            if (logFile && buildId) {
-              try {
-                const logUrl = `${Settings.apis.clsi.url}/project/${projectId}/user/${userId}/build/${buildId}/output/output.log`
-                const logStream = await fetchStream(logUrl, {
-                  signal: AbortSignal.timeout(30000),
-                })
-                const chunks = []
-                for await (const chunk of logStream) {
-                  chunks.push(chunk)
-                }
-                const logText = Buffer.concat(chunks).toString('utf-8')
-                parsedErrors = parseLatexLog(logText, { ignoreDuplicates: true })
-              } catch (logError) {
-                logger.warn({ err: logError, projectId }, 'Failed to fetch compilation log')
-              }
-            }
+            const parsedErrors = await fetchAndParseLog(logFile)
 
             return {
               success: false,
@@ -647,24 +651,7 @@ function createProjectTools(projectId, userId) {
 
           // Compilation succeeded - fetch and parse the log for warnings
           const logFile = outputFiles?.find(f => f.path === 'output.log')
-          let parsedLog = { errors: [], warnings: [], typesetting: [] }
-
-          if (logFile && buildId) {
-            try {
-              const logUrl = `${Settings.apis.clsi.url}/project/${projectId}/user/${userId}/build/${buildId}/output/output.log`
-              const logStream = await fetchStream(logUrl, {
-                signal: AbortSignal.timeout(30000),
-              })
-              const chunks = []
-              for await (const chunk of logStream) {
-                chunks.push(chunk)
-              }
-              const logText = Buffer.concat(chunks).toString('utf-8')
-              parsedLog = parseLatexLog(logText, { ignoreDuplicates: true })
-            } catch (logError) {
-              logger.warn({ err: logError, projectId }, 'Failed to fetch compilation log')
-            }
-          }
+          const parsedLog = await fetchAndParseLog(logFile) || { errors: [], warnings: [], typesetting: [] }
 
           // Check if PDF was generated
           const pdfFile = outputFiles?.find(f => f.path === 'output.pdf')
