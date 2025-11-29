@@ -1,4 +1,4 @@
-import { streamText, tool } from 'ai'
+import { stepCountIs, streamText, tool } from 'ai'
 import { z } from 'zod'
 import SessionManager from '../Authentication/SessionManager.mjs'
 import ProjectGetter from '../Project/ProjectGetter.mjs'
@@ -64,31 +64,23 @@ async function chat(req, res) {
     console.log('[AI Assistant] Starting streamText with model:', Settings.ai?.model || 'anthropic/claude-sonnet-4-5')
     console.log('[AI Assistant] Messages:', JSON.stringify(messages, null, 2))
 
-    // Temporarily disable tools to test basic streaming
-    const useTools = false
-
-    // Stream the response using AI SDK
-    const streamOptions = {
+    // Stream the response using AI SDK with tools enabled
+    const result = streamText({
       model: Settings.ai?.model || 'anthropic/claude-sonnet-4-5',
       system: SYSTEM_PROMPT,
       messages,
-    }
-
-    // Only add tools if enabled (currently disabled due to Bedrock schema issues)
-    if (useTools) {
-      streamOptions.tools = tools
-      streamOptions.maxSteps = 10
-      streamOptions.onStepFinish = async ({ toolResults }) => {
+      tools,
+      // Allow multiple LLM-tool rounds so the model can respond after tool calls
+      stopWhen: stepCountIs(6),
+      onStepFinish: async ({ toolResults }) => {
         console.log('[AI Assistant] Step finished, toolResults:', toolResults)
         if (toolResults && toolResults.length > 0) {
           const sseData = `data: ${JSON.stringify({ type: 'tool_results', data: toolResults })}\n\n`
           console.log('[AI Assistant] Sending tool_results SSE:', sseData)
           res.write(sseData)
         }
-      }
-    }
-
-    const result = streamText(streamOptions)
+      },
+    })
 
     console.log('[AI Assistant] Starting to stream text...')
     
@@ -131,14 +123,13 @@ function createProjectTools(projectId, userId) {
   return {
     list_files: tool({
       description:
-        'List all files and folders in the current LaTeX project. Returns file paths, types (doc/file/folder), and IDs. Always call with folder set to "/" to list all files.',
-      parameters: z.object({
-        folder: z
-          .string()
-          .describe('The folder path to list files from. Use "/" for root folder.'),
+        'List all files and folders in the current LaTeX project. Returns file paths, types (doc/file/folder), and IDs.',
+      inputSchema: z.object({
+        folder: z.string().describe('The folder path to list files from. Use "/" for root folder.'),
       }),
       execute: async ({ folder }) => {
         try {
+          console.log('[AI Assistant] list_files called with folder:', folder)
           const project = await ProjectGetter.promises.getProject(projectId, {
             rootFolder: true,
           })
@@ -150,7 +141,7 @@ function createProjectTools(projectId, userId) {
           const files = []
           collectFiles(project.rootFolder[0], '', files)
 
-          return {
+          const result = {
             success: true,
             files: files.map(f => ({
               path: f.path,
@@ -159,6 +150,8 @@ function createProjectTools(projectId, userId) {
               name: f.name,
             })),
           }
+          console.log('[AI Assistant] list_files result:', result)
+          return result
         } catch (error) {
           logger.error({ err: error, projectId }, 'Error listing files')
           return { error: error.message }
@@ -169,15 +162,12 @@ function createProjectTools(projectId, userId) {
     read_file: tool({
       description:
         'Read the content of a file in the project by its path. Use this to understand the current state of a document before making changes.',
-      parameters: z.object({
-        path: z
-          .string()
-          .describe(
-            'The file path relative to project root, e.g., "main.tex" or "chapters/intro.tex"'
-          ),
+      inputSchema: z.object({
+        path: z.string().describe('The file path relative to project root, e.g., "main.tex" or "chapters/intro.tex"'),
       }),
       execute: async ({ path }) => {
         try {
+          console.log('[AI Assistant] read_file called with path:', path)
           const project = await ProjectGetter.promises.getProject(projectId, {
             rootFolder: true,
           })
@@ -208,12 +198,14 @@ function createProjectTools(projectId, userId) {
             element._id.toString()
           )
 
-          return {
+          const result = {
             success: true,
             path,
             content: lines.join('\n'),
             lineCount: lines.length,
           }
+          console.log('[AI Assistant] read_file result for', path, '- lines:', lines.length)
+          return result
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error reading file')
           return { error: error.message }
@@ -224,23 +216,14 @@ function createProjectTools(projectId, userId) {
     edit_file: tool({
       description:
         'Edit a file by replacing specific content. You must provide the exact text to find and the new text to replace it with. Always read the file first to get the exact content.',
-      parameters: z.object({
-        path: z
-          .string()
-          .describe(
-            'The file path relative to project root, e.g., "main.tex" or "chapters/intro.tex"'
-          ),
-        old_content: z
-          .string()
-          .describe(
-            'The exact content to find and replace. Must match exactly including whitespace.'
-          ),
-        new_content: z
-          .string()
-          .describe('The new content to replace the old content with.'),
+      inputSchema: z.object({
+        path: z.string().describe('The file path relative to project root, e.g., "main.tex"'),
+        old_content: z.string().describe('The exact content to find and replace. Must match exactly.'),
+        new_content: z.string().describe('The new content to replace the old content with.'),
       }),
       execute: async ({ path, old_content, new_content }) => {
         try {
+          console.log('[AI Assistant] edit_file called with path:', path)
           const project = await ProjectGetter.promises.getProject(projectId, {
             rootFolder: true,
           })
@@ -298,12 +281,14 @@ function createProjectTools(projectId, userId) {
             'ai-assistant'
           )
 
-          return {
+          const result = {
             success: true,
             path,
             message: 'File updated successfully',
             linesChanged: Math.abs(newLines.length - lines.length),
           }
+          console.log('[AI Assistant] edit_file result:', result)
+          return result
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error editing file')
           return { error: error.message }
@@ -375,4 +360,3 @@ export default {
   chat,
   getHistory,
 }
-
