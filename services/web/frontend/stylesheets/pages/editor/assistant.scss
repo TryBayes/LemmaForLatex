@@ -132,9 +132,9 @@
     .assistant-textarea-wrapper {
       flex: 1;
       position: relative;
-      background-color: var(--assistant-input-textarea-bg);
+      background-color: #f1f3f4;
       border-radius: 24px;
-      border: 1px solid var(--assistant-input-textarea-border);
+      border: 1px solid transparent;
       transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
       display: flex;
@@ -142,9 +142,10 @@
       padding: 6px;
 
       &:focus-within {
+        background-color: #ffffff;
         border-color: var(--bg-accent-01);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--bg-accent-01);
-        transform: translateY(-1px);
+  
       }
     }
 
@@ -156,15 +157,15 @@
       resize: none;
       border: none;
       border-radius: 16px;
-      color: var(--assistant-input-textarea-color);
+      color: #202124; // Force dark text for visibility
       font-size: var(--font-size-02);
       line-height: 1.5;
       padding: 10px 48px 10px 16px; // Right padding for button
       background: transparent;
 
       &::placeholder {
-        color: var(--content-secondary-themed);
-        opacity: 0.6;
+        color: #5f6368; // Visible placeholder
+        opacity: 1;
         text-align: left;
         direction: ltr;
       }
