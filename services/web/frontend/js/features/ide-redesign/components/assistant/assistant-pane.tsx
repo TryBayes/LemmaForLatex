@@ -373,7 +373,11 @@ function CodeBlock({
     setTimeout(() => setCopied(false), 2000)
   }, [codeString])
 
-  if (inline) {
+  // Better inline detection: no language class AND no newlines AND (inline prop OR short content)
+  const hasNewlines = codeString.includes('\n')
+  const isInlineCode = inline || (!className && !hasNewlines)
+
+  if (isInlineCode) {
     return (
       <code className="assistant-inline-code" {...props}>
         {children}
