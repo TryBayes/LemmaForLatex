@@ -18,7 +18,7 @@ function AiAssistantToggleButton({
     <div className="toolbar-item">
       <button type="button" className={classes} onClick={onClick}>
         <MaterialIcon type="smart_toy" className="align-middle" />
-        <p className="toolbar-label">{t('ai_assistant')}</p>
+        <p className="toolbar-label">Assistant</p>
       </button>
     </div>
   )

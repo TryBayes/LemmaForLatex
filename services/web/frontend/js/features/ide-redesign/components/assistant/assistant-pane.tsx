@@ -1,7 +1,6 @@
 import { FullSizeLoadingSpinner } from '@/shared/components/loading-spinner'
 import MaterialIcon from '@/shared/components/material-icon'
 import { useState, useRef, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import {
   useAiAssistant,
@@ -14,7 +13,6 @@ import ReactMarkdown from 'react-markdown'
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
 
 export const AssistantPane = () => {
-  const { t } = useTranslation()
   const { messages, isLoading, error, sendMessage, stopGeneration } =
     useAiAssistant()
   const [inputValue, setInputValue] = useState('')
@@ -47,12 +45,12 @@ export const AssistantPane = () => {
   return (
     <div className="assistant-panel">
       <div className="assistant-wrapper">
-        <aside className="assistant" aria-label={t('ai_assistant')}>
+        <aside className="assistant" aria-label="AI assistant">
           <div className="assistant-messages">
             <div
               className={classNames({ 'h-100': shouldDisplayPlaceholder })}
             >
-              <h2 className="visually-hidden">{t('ai_assistant')}</h2>
+              <h2 className="visually-hidden">AI assistant</h2>
               {isLoading && messages.length === 0 && <Loading />}
               {shouldDisplayPlaceholder && <Placeholder />}
               <MessageList messages={messages} />
@@ -196,16 +194,14 @@ function AssistantInput({
   onStop: () => void
   isLoading: boolean
 }) {
-  const { t } = useTranslation()
-
   return (
     <form className="assistant-input" onSubmit={e => e.preventDefault()}>
       <label htmlFor="assistant-input" className="visually-hidden">
-        {t('ask_ai_assistant')}
+        Ask AI assistant
       </label>
       <textarea
         id="assistant-input"
-        placeholder={t('ask_ai_assistant')}
+        placeholder="Ask AI assistant"
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={onKeyDown}
@@ -216,7 +212,7 @@ function AssistantInput({
           type="button"
           className="assistant-send-button assistant-stop-button"
           onClick={onStop}
-          aria-label={t('stop')}
+          aria-label="Stop"
         >
           <MaterialIcon type="stop" />
         </button>
@@ -226,7 +222,7 @@ function AssistantInput({
           className="assistant-send-button"
           onClick={onSend}
           disabled={!value.trim()}
-          aria-label={t('send')}
+          aria-label="Send"
         >
           <MaterialIcon type="send" />
         </button>
@@ -236,7 +232,6 @@ function AssistantInput({
 }
 
 function Placeholder() {
-  const { t } = useTranslation()
   return (
     <div className="assistant-empty-state-placeholder">
       <div>
@@ -246,10 +241,10 @@ function Placeholder() {
       </div>
       <div>
         <div className="assistant-empty-state-title">
-          {t('ai_assistant')}
+          AI assistant
         </div>
         <div className="assistant-empty-state-body">
-          {t('ask_questions_about_latex_or_get_help_with_your_document')}
+          Ask questions about LaTeX or get help with your document
         </div>
       </div>
     </div>
