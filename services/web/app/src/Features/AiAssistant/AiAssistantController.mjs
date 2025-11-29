@@ -11,6 +11,9 @@ import { AiConversation } from '../../models/AiConversation.mjs'
 import { AiMessageCount } from '../../models/AiMessageCount.mjs'
 import UserGetter from '../User/UserGetter.mjs'
 import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
+import CompileManager from '../Compile/CompileManager.mjs'
+import { parseLatexLog } from './LatexLogParser.mjs'
+import { fetchStream } from '@overleaf/fetch-utils'
 
 // Check if user has reached their AI message limit
 async function checkMessageLimit(userId) {
@@ -59,20 +62,35 @@ const SYSTEM_PROMPT = `You are Lemma, an expert LaTeX assistant built into a col
 </identity>
 
 <tools>
-You have three tools to interact with the user's project:
+You have four tools:
 
 1. **list_files** - List all files/folders in the project
 2. **read_file** - Read the content of any document file (.tex, .bib, .sty, etc.)
 3. **edit_file** - Replace specific content in a file
+4. **get_compile_errors** - Compile the project and get errors, warnings, and log output
 
-### Tool Usage Rules
+### Smart Tool Usage
 
-- ALWAYS read a file before editing it - never assume you know its contents
-- When the user asks about their document, USE the tools to inspect it first
-- Do not guess or fabricate document content
-- For edits, match the EXACT text including whitespace and line breaks
-- If an edit fails, re-read the file and try again with the correct content
-- Use list_files when you need to understand the project structure
+**When to use list_files:**
+- Only when you genuinely don't know the project structure
+- When the user asks about files you haven't seen
+- NOT needed if user mentions a specific file (e.g., "edit main.tex") - just read that file directly
+
+**When to use read_file:**
+- Before editing a file you haven't seen in this conversation
+- When the user asks about content you don't know
+- NOT needed if the file content was already shown to you recently in this conversation
+- NOT needed for simple additions where location is clear (e.g., "add this package" - you know it goes in the preamble)
+
+**When to use edit_file:**
+- Match the EXACT text including whitespace and line breaks
+- If an edit fails, re-read the file and try again
+
+**When to use get_compile_errors (IMPORTANT):**
+- Run this after making edits to verify they compile correctly
+- Run it when the user reports a compilation error
+- Run it when debugging LaTeX issues
+- This is your feedback loop - use it to catch mistakes before the user does
 </tools>
 
 <communication>
@@ -100,7 +118,8 @@ When making document changes:
 - Make minimal, targeted edits - don't refactor unrelated code
 - Preserve the user's formatting style and indentation
 - For multi-step changes, complete them efficiently without unnecessary back-and-forth
-- After editing, briefly confirm what was changed
+- After editing, run get_compile_errors to verify the changes compile - this is critical
+- If compilation fails, fix the errors immediately before reporting success to the user
 - If a request is ambiguous about WHERE to make a change, ask before editing
 </editing_guidelines>
 
@@ -455,6 +474,113 @@ function createProjectTools(projectId, userId) {
         } catch (error) {
           logger.error({ err: error, projectId, path }, 'Error editing file')
           return { error: error.message }
+        }
+      },
+    }),
+
+    get_compile_errors: tool({
+      description:
+        'Compile the LaTeX project and get all errors, warnings, and typesetting issues. Use this to check if your edits compile correctly and to diagnose compilation problems.',
+      inputSchema: z.object({
+        include_typesetting: z.boolean().optional().describe('Include typesetting warnings (overfull/underfull boxes). Default: false'),
+      }),
+      execute: async ({ include_typesetting = false }) => {
+        try {
+          // Trigger compilation
+          const {
+            status,
+            outputFiles,
+            clsiServerId,
+            validationProblems,
+            buildId,
+          } = await CompileManager.promises.compile(projectId, userId, {})
+
+          // Check for validation problems first
+          if (validationProblems && Object.keys(validationProblems).length > 0) {
+            return {
+              success: false,
+              status: 'validation-error',
+              validationProblems,
+              message: 'Project has validation problems that prevent compilation',
+            }
+          }
+
+          // Check compile status
+          if (status !== 'success') {
+            // Try to find and parse the log file even on failure
+            const logFile = outputFiles?.find(f => f.path === 'output.log')
+            let parsedErrors = null
+
+            if (logFile && buildId) {
+              try {
+                const logUrl = `${Settings.apis.clsi.url}/project/${projectId}/user/${userId}/build/${buildId}/output/output.log`
+                const logStream = await fetchStream(logUrl, {
+                  signal: AbortSignal.timeout(30000),
+                })
+                const chunks = []
+                for await (const chunk of logStream) {
+                  chunks.push(chunk)
+                }
+                const logText = Buffer.concat(chunks).toString('utf-8')
+                parsedErrors = parseLatexLog(logText, { ignoreDuplicates: true })
+              } catch (logError) {
+                logger.warn({ err: logError, projectId }, 'Failed to fetch compilation log')
+              }
+            }
+
+            return {
+              success: false,
+              status,
+              errors: parsedErrors?.errors || [],
+              warnings: parsedErrors?.warnings || [],
+              typesetting: include_typesetting ? (parsedErrors?.typesetting || []) : [],
+              message: `Compilation failed with status: ${status}`,
+              errorCount: parsedErrors?.errors?.length || 0,
+              warningCount: parsedErrors?.warnings?.length || 0,
+            }
+          }
+
+          // Compilation succeeded - fetch and parse the log for warnings
+          const logFile = outputFiles?.find(f => f.path === 'output.log')
+          let parsedLog = { errors: [], warnings: [], typesetting: [] }
+
+          if (logFile && buildId) {
+            try {
+              const logUrl = `${Settings.apis.clsi.url}/project/${projectId}/user/${userId}/build/${buildId}/output/output.log`
+              const logStream = await fetchStream(logUrl, {
+                signal: AbortSignal.timeout(30000),
+              })
+              const chunks = []
+              for await (const chunk of logStream) {
+                chunks.push(chunk)
+              }
+              const logText = Buffer.concat(chunks).toString('utf-8')
+              parsedLog = parseLatexLog(logText, { ignoreDuplicates: true })
+            } catch (logError) {
+              logger.warn({ err: logError, projectId }, 'Failed to fetch compilation log')
+            }
+          }
+
+          // Check if PDF was generated
+          const pdfFile = outputFiles?.find(f => f.path === 'output.pdf')
+
+          return {
+            success: true,
+            status: 'success',
+            pdfGenerated: !!pdfFile,
+            errors: parsedLog.errors,
+            warnings: parsedLog.warnings,
+            typesetting: include_typesetting ? parsedLog.typesetting : [],
+            errorCount: parsedLog.errors.length,
+            warningCount: parsedLog.warnings.length,
+            typesettingCount: parsedLog.typesetting.length,
+            message: pdfFile
+              ? `Compilation successful! PDF generated with ${parsedLog.errors.length} errors, ${parsedLog.warnings.length} warnings.`
+              : 'Compilation completed but no PDF was generated.',
+          }
+        } catch (error) {
+          logger.error({ err: error, projectId }, 'Error compiling project')
+          return { error: error.message, success: false }
         }
       },
     }),
