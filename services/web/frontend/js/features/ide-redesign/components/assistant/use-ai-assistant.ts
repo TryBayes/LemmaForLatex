@@ -35,12 +35,19 @@ interface StreamEvent {
   data?: string | ToolResult[]
 }
 
+interface SavedPart {
+  type: 'text' | 'tool_results'
+  content?: string
+  results?: ToolResult[]
+}
+
 interface SavedMessage {
   _id?: string
   role: MessageRole
   content: string
   timestamp: string
   toolResults?: ToolResult[]
+  parts?: SavedPart[]
 }
 
 export interface Conversation {
@@ -118,14 +125,25 @@ export function useAiAssistant() {
       })
       if (response.ok) {
         const data = await response.json()
-        const loadedMessages: Message[] = data.messages.map((msg: SavedMessage, index: number) => ({
-          id: msg._id || `loaded-${index}`,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-          toolResults: msg.toolResults,
-          parts: [{ type: 'text' as const, content: msg.content }],
-        }))
+        const loadedMessages: Message[] = data.messages.map((msg: SavedMessage, index: number) => {
+          // Use saved parts directly - they have the correct order
+          const parts: MessagePart[] = (msg.parts || []).map((p: SavedPart) => {
+            if (p.type === 'text') {
+              return { type: 'text' as const, content: p.content || '' }
+            } else {
+              return { type: 'tool_results' as const, results: p.results || [] }
+            }
+          })
+
+          return {
+            id: msg._id || `loaded-${index}`,
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+            toolResults: msg.toolResults,
+            parts: parts.length > 0 ? parts : [{ type: 'text' as const, content: msg.content }],
+          }
+        })
         setMessages(loadedMessages)
         setCurrentConversationId(conversationId)
         setShowHistory(false)

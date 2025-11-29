@@ -68,6 +68,11 @@ async function chat(req, res) {
     console.log('[AI Assistant] Starting streamText with model:', selectedModel)
     console.log('[AI Assistant] Messages:', JSON.stringify(messages, null, 2))
 
+    // Track parts in order for saving to database
+    let allToolResults = []
+    let messageParts = []
+    let currentTextPart = { type: 'text', content: '' }
+
     // Stream the response using AI SDK with tools enabled
     const result = streamText({
       model: selectedModel,
@@ -79,6 +84,20 @@ async function chat(req, res) {
       onStepFinish: async ({ toolResults }) => {
         console.log('[AI Assistant] Step finished, toolResults:', toolResults)
         if (toolResults && toolResults.length > 0) {
+          // Save current text part if it has content
+          if (currentTextPart.content.trim()) {
+            messageParts.push({ ...currentTextPart })
+            currentTextPart = { type: 'text', content: '' }
+          }
+          
+          // Add tool results part
+          const toolResultsForDb = toolResults.map(tr => ({
+            toolName: tr.toolName,
+            result: tr.result,
+          }))
+          allToolResults = [...allToolResults, ...toolResultsForDb]
+          messageParts.push({ type: 'tool_results', results: toolResultsForDb })
+          
           const sseData = `data: ${JSON.stringify({ type: 'tool_results', data: toolResults })}\n\n`
           console.log('[AI Assistant] Sending tool_results SSE:', sseData)
           res.write(sseData)
@@ -93,13 +112,20 @@ async function chat(req, res) {
     for await (const chunk of result.textStream) {
       if (chunk) {
         totalText += chunk
+        currentTextPart.content += chunk
         const sseData = `data: ${JSON.stringify({ type: 'text', data: chunk })}\n\n`
         console.log('[AI Assistant] Sending text chunk:', chunk)
         res.write(sseData)
       }
     }
 
+    // Save any remaining text part
+    if (currentTextPart.content.trim()) {
+      messageParts.push({ ...currentTextPart })
+    }
+
     console.log('[AI Assistant] Stream complete. Total text:', totalText)
+    console.log('[AI Assistant] Parts collected:', messageParts.length)
 
     // Save conversation to database
     try {
@@ -122,7 +148,7 @@ async function chat(req, res) {
               messages: {
                 $each: [
                   { role: 'user', content: lastUserMessage.content, timestamp: new Date() },
-                  { role: 'assistant', content: totalText, timestamp: new Date() },
+                  { role: 'assistant', content: totalText, timestamp: new Date(), toolResults: allToolResults, parts: messageParts },
                 ],
               },
             },
@@ -137,7 +163,7 @@ async function chat(req, res) {
           title: generateTitle(lastUserMessage.content),
           messages: [
             { role: 'user', content: lastUserMessage.content, timestamp: new Date() },
-            { role: 'assistant', content: totalText, timestamp: new Date() },
+            { role: 'assistant', content: totalText, timestamp: new Date(), toolResults: allToolResults, parts: messageParts },
           ],
           createdAt: new Date(),
           updatedAt: new Date(),
