@@ -9,81 +9,196 @@ function StripeSuccessPage() {
   const planName = getMeta('ol-planName') || 'Lemma Pro'
 
   return (
-    <div className="container" style={{ paddingTop: '40px', paddingBottom: '40px' }}>
-      <div className="row">
-        <div className="col-lg-8 col-lg-offset-2">
-          <div className="card" style={{ 
-            padding: '40px', 
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <div style={{ marginBottom: '24px' }}>
-              <svg 
-                width="64" 
-                height="64" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                style={{ color: '#22c55e' }}
-              >
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-                <path d="M8 12l2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            
-            <h1 style={{ fontSize: '28px', marginBottom: '16px', color: '#1a1a1a' }}>
-              Welcome to {planName}!
-            </h1>
-            
-            <p style={{ fontSize: '16px', color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
-              Thank you for subscribing. Your account has been upgraded and you now have access to unlimited AI messages and all premium features.
-            </p>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-light-secondary, #f5f5f5)',
+        padding: '24px',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          background: 'var(--bg-light-primary, #ffffff)',
+          borderRadius: '8px',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Success Banner */}
+        <div
+          style={{
+            background: 'var(--green-50, #138a07)',
+            padding: '32px 24px',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              margin: '0 auto 16px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h1
+            style={{
+              color: 'white',
+              fontSize: '24px',
+              fontWeight: '600',
+              margin: 0,
+              fontFamily: 'var(--font-family-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
+            }}
+          >
+            Welcome to {planName}!
+          </h1>
+        </div>
 
-            <div style={{ 
-              background: '#f0fdf4', 
-              border: '1px solid #bbf7d0',
-              borderRadius: '8px', 
-              padding: '16px',
-              marginBottom: '24px'
-            }}>
-              <h3 style={{ fontSize: '16px', margin: '0 0 8px', color: '#166534' }}>
-                What's included:
-              </h3>
-              <ul style={{ 
-                listStyle: 'none', 
-                padding: 0, 
-                margin: 0,
-                textAlign: 'left',
-                color: '#166534'
-              }}>
-                <li style={{ padding: '4px 0' }}>✓ Unlimited AI assistant messages</li>
-                <li style={{ padding: '4px 0' }}>✓ Priority compile queue</li>
-                <li style={{ padding: '4px 0' }}>✓ Priority support</li>
-                <li style={{ padding: '4px 0' }}>✓ Early access to new features</li>
-              </ul>
-            </div>
+        {/* Content */}
+        <div style={{ padding: '32px 24px' }}>
+          <p
+            style={{
+              fontSize: '15px',
+              color: 'var(--content-secondary, #5d6879)',
+              lineHeight: '1.6',
+              margin: '0 0 24px',
+              textAlign: 'center',
+            }}
+          >
+            Thank you for subscribing! Your account has been upgraded and you now
+            have access to all premium features.
+          </p>
 
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
-              You can manage your subscription anytime from your{' '}
-              <a href="/user/subscription" style={{ color: '#16a34a' }}>account settings</a>.
-            </p>
-
-            <a 
-              href="/project" 
+          {/* Features List */}
+          <div
+            style={{
+              background: 'var(--bg-light-secondary, #f9fafb)',
+              borderRadius: '6px',
+              padding: '20px',
+              marginBottom: '24px',
+            }}
+          >
+            <div
               style={{
-                display: 'inline-block',
-                background: '#16a34a',
-                color: 'white',
-                padding: '12px 32px',
-                borderRadius: '9999px',
-                textDecoration: 'none',
+                fontSize: '13px',
                 fontWeight: '600',
-                fontSize: '16px'
+                color: 'var(--content-secondary, #5d6879)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '12px',
               }}
             >
-              Start Writing
-            </a>
+              Your plan includes
+            </div>
+            <ul
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+              }}
+            >
+              {[
+                'Unlimited AI assistant messages',
+                'Priority compile queue',
+                'Priority support',
+                'Early access to new features',
+              ].map((feature, index) => (
+                <li
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 0',
+                    fontSize: '14px',
+                    color: 'var(--content-primary, #2c3645)',
+                    borderBottom: index < 3 ? '1px solid var(--border-color-01, #e7e9ee)' : 'none',
+                  }}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--green-50, #138a07)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  {feature}
+                </li>
+              ))}
+            </ul>
           </div>
+
+          {/* CTA Button */}
+          <a
+            href="/project"
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '12px 24px',
+              background: 'var(--green-50, #138a07)',
+              color: 'white',
+              fontSize: '15px',
+              fontWeight: '600',
+              textAlign: 'center',
+              textDecoration: 'none',
+              borderRadius: '4px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = 'var(--green-60, #0d6d06)')}
+            onMouseOut={(e) => (e.currentTarget.style.background = 'var(--green-50, #138a07)')}
+          >
+            Go to your projects
+          </a>
+
+          {/* Secondary Link */}
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--content-secondary, #5d6879)',
+              textAlign: 'center',
+              margin: '16px 0 0',
+            }}
+          >
+            Manage your subscription in{' '}
+            <a
+              href="/user/subscription"
+              style={{
+                color: 'var(--green-50, #138a07)',
+                textDecoration: 'none',
+              }}
+            >
+              account settings
+            </a>
+          </p>
         </div>
       </div>
     </div>
