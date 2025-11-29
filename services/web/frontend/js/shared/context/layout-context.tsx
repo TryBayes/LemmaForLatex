@@ -30,6 +30,7 @@ export type IdeView = 'editor' | 'file' | 'pdf' | 'history'
 export type LayoutContextOwnStates = {
   view: IdeView | null
   chatIsOpen: boolean
+  aiAssistantIsOpen: boolean
   reviewPanelOpen: boolean
   miniReviewPanelVisible: boolean
   leftMenuShown: boolean
@@ -47,6 +48,9 @@ export type LayoutContextValue = LayoutContextOwnStates & {
   changeLayout: (newLayout: IdeLayout, newView?: IdeView) => void
   setView: (view: IdeView | null) => void
   setChatIsOpen: Dispatch<SetStateAction<LayoutContextValue['chatIsOpen']>>
+  setAiAssistantIsOpen: Dispatch<
+    SetStateAction<LayoutContextValue['aiAssistantIsOpen']>
+  >
   setReviewPanelOpen: Dispatch<
     SetStateAction<LayoutContextValue['reviewPanelOpen']>
   >
@@ -131,6 +135,12 @@ export const LayoutProvider: FC<React.PropsWithChildren> = ({ children }) => {
   // whether the chat pane is open
   const [chatIsOpen, setChatIsOpen] = usePersistedState<boolean>(
     'ui.chatOpen',
+    false
+  )
+
+  // whether the AI assistant pane is open
+  const [aiAssistantIsOpen, setAiAssistantIsOpen] = usePersistedState<boolean>(
+    'ui.aiAssistantOpen',
     false
   )
 
@@ -266,6 +276,7 @@ export const LayoutProvider: FC<React.PropsWithChildren> = ({ children }) => {
       detachRole,
       changeLayout,
       chatIsOpen,
+      aiAssistantIsOpen,
       leftMenuShown,
       openFile,
       pdfLayout,
@@ -276,6 +287,7 @@ export const LayoutProvider: FC<React.PropsWithChildren> = ({ children }) => {
       miniReviewPanelVisible,
       loadingStyleSheet,
       setChatIsOpen,
+      setAiAssistantIsOpen,
       setLeftMenuShown,
       setOpenFile,
       setPdfLayout,
@@ -293,6 +305,7 @@ export const LayoutProvider: FC<React.PropsWithChildren> = ({ children }) => {
       detachRole,
       changeLayout,
       chatIsOpen,
+      aiAssistantIsOpen,
       leftMenuShown,
       openFile,
       pdfLayout,
@@ -303,6 +316,7 @@ export const LayoutProvider: FC<React.PropsWithChildren> = ({ children }) => {
       miniReviewPanelVisible,
       loadingStyleSheet,
       setChatIsOpen,
+      setAiAssistantIsOpen,
       setLeftMenuShown,
       setOpenFile,
       setPdfLayout,
