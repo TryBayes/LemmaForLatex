@@ -11,7 +11,7 @@ export default function HeaderLogoOrTitle({
   const { appName } = getMeta('ol-ExposedSettings')
   const logoUrl = customLogo ?? overleafLogo
   return (
-    <a href="/" aria-label={appName} className="navbar-brand">
+    <a href="/home" aria-label={appName} className="navbar-brand">
       {(customLogo || !title) && (
         <div
           className="navbar-logo"

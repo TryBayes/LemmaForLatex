@@ -455,6 +455,7 @@ module.exports = {
       }
     : undefined,
   enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',
+  enableHomepage: process.env.ENABLE_HOMEPAGE === 'true',
 
   // Stripe Configuration
   stripe: process.env.STRIPE_SECRET_KEY

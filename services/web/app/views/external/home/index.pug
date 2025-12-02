@@ -1,0 +1,218 @@
+extends ../../layout-marketing
+
+block vars
+  - var title = 'Lemma — AI-Powered LaTeX Editor'
+  - var description = 'The intelligent LaTeX editor with AI assistance built right in. Write, collaborate, and compile beautiful scientific documents faster than ever.'
+  - var bodyClass = 'website-redesign'
+  - var suppressNavbar = true
+  - var suppressFooter = true
+
+block content
+  main.ai-homepage
+    header.page-header
+      .header-content
+        a.header-logo(href=isLoggedIn ? '/project' : '/')
+          .logo-icon-container
+            svg.logo-icon(xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100')
+              text(x='50' y='65' font-family='Arial, sans-serif' font-size='120' font-weight='bold' fill='currentColor' text-anchor='middle' dominant-baseline='middle') ∞
+          .logo-text-container
+            span.logo-text Lemma
+
+        nav.header-nav
+          if isLoggedIn
+            a.nav-cta(href='/project')
+              span.nav-text-desktop Go to your projects
+              span.nav-text-mobile Projects
+          else
+            a.nav-link(href='/login') Sign in
+            a.nav-cta(href='/register')
+              span.nav-text-desktop Start writing
+              span.nav-text-mobile Start
+
+    section.hero#hero(data-animate='fade-up')
+      .hero-layout
+        .hero-content
+          h1.hero-title(data-animate='fade-up' data-delay='0.1')
+            | Your AI copilot
+            br
+            | for LaTeX writing
+          .hero-cta(data-animate='fade-up' data-delay='0.2')
+            if isLoggedIn
+              a.btn-primary.btn-large(href='/project') Go to your projects
+            else
+              a.btn-primary.btn-large(href='/register') Start writing for free
+              a.btn-secondary.btn-large(href='#features') See how it works
+
+    section.split-section.section-why#why(data-animate='fade-up')
+      .section-sidebar
+        .sidebar-sticky
+          span.section-label About Lemma
+          .sidebar-visual
+            svg(viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg')
+              text(x='100' y='115' font-family='Arial, sans-serif' font-size='140' font-weight='bold' fill='rgba(255,255,255,0.95)' text-anchor='middle' dominant-baseline='middle') ∞
+      .section-content
+        h2.section-title What is Lemma?
+        .content-text
+          p
+            | Lemma is Cursor for Overleaf. It's the intelligent LaTeX editor that brings the power of AI directly into your academic writing workflow. Built on the trusted Overleaf platform, Lemma adds cutting-edge AI capabilities that understand LaTeX syntax, scientific writing conventions, and your document context.
+          p
+            | Whether you're writing research papers, theses, or technical documentation, Lemma helps you write faster, fix errors instantly, and maintain perfect formatting—all while collaborating seamlessly with your team.
+          p
+            | Join thousands of researchers, academics, and students who have already discovered a smarter way to write LaTeX.
+
+    section.grid-section.section-features#features(data-animate='fade-up')
+      .section-sidebar
+        .sidebar-sticky
+          span.section-label Features
+      .feature-grid
+        article.feature-card(data-animate='fade-up' data-delay='0.1')
+          .feature-icon
+            img.feature-icon-svg(src='/landingpage/Arrow.svg' alt='AI Writing Assistant Icon')
+          h3 AI Writing Assistant
+          p Context-aware suggestions for equations, structure, and prose that understand LaTeX conventions.
+
+        article.feature-card(data-animate='fade-up' data-delay='0.2')
+          .feature-icon
+            img.feature-icon-svg(src='/landingpage/Refresh.svg' alt='Error Resolution Icon')
+          h3 Error Resolution
+          p One-click solutions for compilation errors with AI-powered debugging and explanations.
+
+        article.feature-card(data-animate='fade-up' data-delay='0.3')
+          .feature-icon
+            img.feature-icon-svg(src='/landingpage/Dots.svg' alt='Smart Citations Icon')
+          h3 Smart Citations
+          p Intelligent BibTeX management with auto-formatting and academic standard compliance.
+
+        article.feature-card(data-animate='fade-up' data-delay='0.1')
+          .feature-icon
+            img.feature-icon-svg(src='/landingpage/People.svg' alt='Real-time Collaboration Icon')
+          h3 Real-time Collaboration
+          p Work together seamlessly with version control, live editing, and inline comments.
+
+        article.feature-card(data-animate='fade-up' data-delay='0.2')
+          .feature-icon
+            img.feature-icon-svg(src='/landingpage/bars.svg' alt='Smart Templates Icon')
+          h3 Smart Templates
+          p Industry-standard templates for papers, theses, and more—customized for your field.
+
+        article.feature-card(data-animate='fade-up' data-delay='0.3')
+          .feature-icon
+            img.feature-icon-svg(src='/landingpage/BarChart.svg' alt='Live Preview Icon')
+          h3 Live Preview
+          p Instant compilation with live PDF preview. See changes as you type, no setup needed.
+
+    section.split-section.section-workflow#workflow(data-animate='fade-up')
+      .section-sidebar
+        .sidebar-sticky
+          span.section-label How it works
+      .section-content
+        h2.section-title From first draft to publication
+        .workflow-steps
+          .workflow-step(data-animate='fade-up' data-delay='0.1')
+            .step-marker 01
+            .step-content
+              h3 Start with AI
+              p Begin with smart templates or let AI help you outline your document structure based on your research goals.
+
+          .workflow-step(data-animate='fade-up' data-delay='0.2')
+            .step-marker 02
+            .step-content
+              h3 Write & refine
+              p Get intelligent suggestions as you write. AI helps with equations, formatting, structure, and academic language.
+
+          .workflow-step(data-animate='fade-up' data-delay='0.3')
+            .step-marker 03
+            .step-content
+              h3 Collaborate effortlessly
+              p Share with coauthors for real-time editing. AI assists in resolving comments and maintaining consistency.
+
+          .workflow-step(data-animate='fade-up' data-delay='0.4')
+            .step-marker 04
+            .step-content
+              h3 Compile & publish
+              p Export publication-ready PDFs or sync to GitHub. Lemma ensures perfect formatting every time.
+
+    section.faq-section#faq(data-animate='fade-up')
+      .faq-layout
+        .faq-sidebar
+          span.section-label Questions
+        .faq-content
+          details.faq-item(data-animate='fade-up' data-delay='0.1')
+            summary.faq-question
+              span How is Lemma different from regular Overleaf?
+              .faq-icon
+            .faq-answer
+              p
+                | Lemma is built on Overleaf's infrastructure but adds powerful AI capabilities. You get all of Overleaf's reliability and features, plus intelligent writing assistance, error debugging, citation management, and context-aware suggestions that understand LaTeX and academic writing.
+
+          details.faq-item(data-animate='fade-up' data-delay='0.2')
+            summary.faq-question
+              span Will Lemma work with my existing Overleaf projects?
+              .faq-icon
+            .faq-answer
+              p
+                | Yes! Lemma is fully compatible with Overleaf projects. You can import your existing documents and start using AI features immediately without any conversion or setup.
+
+          details.faq-item(data-animate='fade-up' data-delay='0.3')
+            summary.faq-question
+              span Is my research data secure?
+              .faq-icon
+            .faq-answer
+              p
+                | Absolutely. Lemma uses enterprise-grade security, end-to-end encryption, and follows strict data privacy standards. Your research stays private and secure. We never train AI models on your documents without explicit permission.
+
+          details.faq-item(data-animate='fade-up' data-delay='0.4')
+            summary.faq-question
+              span Can I use Lemma for free?
+              .faq-icon
+            .faq-answer
+              p
+                | Yes! Lemma offers a free tier with 5 AI requests per week. For unlimited AI assistance, priority compilation, and advanced features, upgrade to Lemma Pro at $20/month.
+
+    footer.page-footer
+      .footer-content
+        .footer-logo
+          span.logo-text Lemma
+          p © 2025 Lemma. Built on Overleaf.
+        .footer-links
+          .footer-column
+            h4 Product
+            a(href='#features') Features
+            a(href='#workflow') How it works
+            a(href='#faq') FAQ
+          .footer-column
+            h4 Resources
+            a(href='/learn') Documentation
+            a(href='/templates') Templates
+            a(href='mailto:founders@lemmaforlatex.com') Contact
+          .footer-column
+            h4 Account
+            if isLoggedIn
+              a(href='/project') Your projects
+              a(href='/user/settings') Settings
+            else
+              a(href='/login') Sign in
+              a(href='/register') Get started
+
+    script(nonce=scriptNonce).
+      // Scroll animations
+      (function() {
+        const observerOptions = {
+          root: null,
+          rootMargin: '0px',
+          threshold: 0.1
+        };
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('animated');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, observerOptions);
+        // Observe all elements with data-animate attribute
+        document.querySelectorAll('[data-animate]').forEach(el => {
+          observer.observe(el);
+        });
+      })();
+

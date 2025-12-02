@@ -32,6 +32,7 @@ async function home(req, res) {
     const language = acceptLanguage.split(',')[0].split(';')[0].trim() // filters the first language
     const host = req.headers.host
     const domain = host?.split('.')[0]
+    const isLoggedIn = SessionManager.isUserLoggedIn(req.session)
 
     AnalyticsManager.recordEventForSession(req.session, 'home-page-view', {
       page: req.path,
@@ -47,6 +48,7 @@ async function home(req, res) {
 
     res.render('external/home/index', {
       shouldLoadHotjar: hotjarAssignment?.variant === 'enabled',
+      isLoggedIn,
     })
   } else {
     res.redirect('/login')

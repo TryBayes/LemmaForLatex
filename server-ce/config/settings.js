@@ -54,6 +54,9 @@ const settings = {
 
   brandPrefix: '',
 
+  // Enable the custom Lemma homepage
+  enableHomepage: true,
+
   allowAnonymousReadAndWriteSharing:
     process.env.OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING === 'true',
 
