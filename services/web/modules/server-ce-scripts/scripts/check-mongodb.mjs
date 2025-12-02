@@ -19,9 +19,9 @@ function shouldSkipAdminChecks() {
 function handleUnauthorizedError(err, feature) {
   if (
     err instanceof mongodb.MongoServerError &&
-    err.codeName === 'Unauthorized'
+    (err.codeName === 'Unauthorized' || err.codeName === 'AtlasError')
   ) {
-    console.warn(`Warning: failed to check ${feature} (not authorised)`)
+    console.warn(`Warning: failed to check ${feature} (${err.codeName})`)
     if (!shouldSkipAdminChecks()) {
       console.error(
         `Please ensure the MongoDB user has the required permissions, for more information see
