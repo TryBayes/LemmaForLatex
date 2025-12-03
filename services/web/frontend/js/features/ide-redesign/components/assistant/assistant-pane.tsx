@@ -451,6 +451,15 @@ function AssistantInput({
   selectedModel: string
   onModelChange: (model: string) => void
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Reset textarea height when value is cleared (e.g., after sending)
+  useEffect(() => {
+    if (!value && textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
+  }, [value])
+
   return (
     <form className="assistant-input" onSubmit={e => e.preventDefault()}>
       <div className="assistant-model-selector">
@@ -474,6 +483,7 @@ function AssistantInput({
             Ask AI assistant
           </label>
           <textarea
+            ref={textareaRef}
             id="assistant-input"
             placeholder="Ask AI assistant..."
             value={value}
