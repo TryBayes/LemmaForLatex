@@ -31,8 +31,10 @@ interface ToolResultsPart {
 }
 
 interface StreamEvent {
-  type: 'text' | 'tool_results' | 'done' | 'error' | 'conversation_id'
+  type: 'text' | 'tool_results' | 'done' | 'error' | 'conversation_id' | 'metadata'
   data?: string | ToolResult[]
+  usingUserKey?: boolean
+  provider?: string
 }
 
 interface SavedPart {
@@ -73,6 +75,8 @@ export function useAiAssistant() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [usingUserKey, setUsingUserKey] = useState(false)
+  const [hasUserKeys, setHasUserKeys] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const conversationsLoadedRef = useRef(false)
 
@@ -119,6 +123,29 @@ export function useAiAssistant() {
     }
 
     loadMessageCount()
+  }, [])
+
+  // Check if user has any API keys configured
+  useEffect(() => {
+    const checkUserKeys = async () => {
+      try {
+        const response = await fetch('/user/ai-keys', {
+          credentials: 'same-origin',
+        })
+        if (response.ok) {
+          const data = await response.json()
+          // Check if any provider has a key configured
+          const hasKeys = Object.values(data.keys || {}).some(
+            (key: any) => key?.configured
+          )
+          setHasUserKeys(hasKeys)
+        }
+      } catch (err) {
+        // Silently ignore - user might not have access to this endpoint
+      }
+    }
+
+    checkUserKeys()
   }, [])
 
   // Load a specific conversation
@@ -219,6 +246,9 @@ export function useAiAssistant() {
       }
 
       setMessages((prev: Message[]) => [...prev, assistantMessage])
+
+      // Reset user key status for this request
+      setUsingUserKey(false)
 
       // Abort any previous request
       if (abortControllerRef.current) {
@@ -354,6 +384,13 @@ export function useAiAssistant() {
                     }
                     break
 
+                  case 'metadata':
+                    // Server indicates if using user's own API key
+                    if (event.usingUserKey) {
+                      setUsingUserKey(true)
+                    }
+                    break
+
                   case 'error':
                     setError(
                       typeof event.data === 'string'
@@ -428,5 +465,7 @@ export function useAiAssistant() {
     deleteConversation,
     showHistory,
     setShowHistory,
+    usingUserKey,
+    hasUserKeys,
   }
 }

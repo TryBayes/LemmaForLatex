@@ -1,4 +1,5 @@
 import { stepCountIs, streamText, tool } from 'ai'
+import { createOpenAI } from '@ai-sdk/openai'
 import { z } from 'zod'
 import SessionManager from '../Authentication/SessionManager.mjs'
 import ProjectGetter from '../Project/ProjectGetter.mjs'
@@ -11,11 +12,96 @@ import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import { AiConversation } from '../../models/AiConversation.mjs'
 import { AiMessageCount } from '../../models/AiMessageCount.mjs'
+import { UserAiKeys, SUPPORTED_PROVIDERS } from '../../models/UserAiKeys.mjs'
 import UserGetter from '../User/UserGetter.mjs'
 import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
 import CompileManager from '../Compile/CompileManager.mjs'
 import { parseLatexLog } from './LatexLogParser.mjs'
 import { fetchStream } from '@overleaf/fetch-utils'
+
+// ============================================================================
+// Provider Configuration for User API Keys
+// ============================================================================
+
+const PROVIDER_CONFIGS = {
+  openai: {
+    baseURL: 'https://api.openai.com/v1',
+    // OpenAI uses standard model names without prefix
+    getModelId: modelString => modelString.replace('openai/', ''),
+  },
+  anthropic: {
+    // Anthropic has an OpenAI-compatible API
+    baseURL: 'https://api.anthropic.com/v1',
+    getModelId: modelString => modelString.replace('anthropic/', ''),
+  },
+  google: {
+    // Google's Gemini OpenAI-compatible endpoint
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    getModelId: modelString => modelString.replace('google/', ''),
+  },
+}
+
+/**
+ * Extract provider name from a model string.
+ * e.g., "anthropic/claude-sonnet-4-5" -> "anthropic"
+ */
+function extractProvider(modelString) {
+  if (!modelString || typeof modelString !== 'string') return null
+  const parts = modelString.split('/')
+  if (parts.length < 2) return null
+  return parts[0].toLowerCase()
+}
+
+/**
+ * Create a model instance using user's API key if available.
+ * Falls back to platform gateway if no user key is configured.
+ * 
+ * @param {string} userId - The user's ID
+ * @param {string} modelString - The model identifier (e.g., "anthropic/claude-sonnet-4-5")
+ * @returns {Promise<{model: any, usingUserKey: boolean, provider: string|null}>}
+ */
+async function createModelWithKey(userId, modelString) {
+  const provider = extractProvider(modelString)
+  
+  // If provider not recognized or not supported, use gateway
+  if (!provider || !PROVIDER_CONFIGS[provider]) {
+    return { model: modelString, usingUserKey: false, provider: null }
+  }
+
+  try {
+    // Check if user has a key for this provider
+    const userKey = await UserAiKeys.getKeyForProvider(userId, provider)
+    
+    if (!userKey) {
+      // No user key, use platform gateway
+      return { model: modelString, usingUserKey: false, provider }
+    }
+
+    // User has a key - create provider-specific client
+    const config = PROVIDER_CONFIGS[provider]
+    const modelId = config.getModelId(modelString)
+
+    // Create OpenAI-compatible client with user's key and provider's baseURL
+    const client = createOpenAI({
+      apiKey: userKey,
+      baseURL: config.baseURL,
+    })
+
+    logger.info({ userId, provider }, 'Using user API key for AI request')
+
+    return {
+      model: client(modelId),
+      usingUserKey: true,
+      provider,
+    }
+  } catch (error) {
+    logger.warn(
+      { err: error, userId, provider },
+      'Error creating model with user key, falling back to gateway'
+    )
+    return { model: modelString, usingUserKey: false, provider }
+  }
+}
 
 // Check if user has reached their AI message limit
 async function checkMessageLimit(userId) {
@@ -154,16 +240,27 @@ async function chat(req, res) {
     return res.status(400).json({ error: 'Messages array is required' })
   }
 
-  // Check message limit before processing
-  const limitCheck = await checkMessageLimit(userId)
-  if (!limitCheck.allowed) {
-    return res.status(429).json({ 
-      error: 'message_limit_reached',
-      message: limitCheck.message,
-      remaining: limitCheck.remaining,
-      limit: limitCheck.limit,
-      upgradeUrl: '/user/subscription/plans'
-    })
+  // Determine which model to use
+  const requestedModel = model || Settings.ai?.model || 'anthropic/claude-sonnet-4-5'
+  
+  // Check if user has their own API key for this provider
+  const { model: resolvedModel, usingUserKey, provider } = await createModelWithKey(
+    userId,
+    requestedModel
+  )
+
+  // Check message limit - skip if user is using their own API key
+  if (!usingUserKey) {
+    const limitCheck = await checkMessageLimit(userId)
+    if (!limitCheck.allowed) {
+      return res.status(429).json({ 
+        error: 'message_limit_reached',
+        message: limitCheck.message,
+        remaining: limitCheck.remaining,
+        limit: limitCheck.limit,
+        upgradeUrl: '/user/subscription/plans'
+      })
+    }
   }
 
   try {
@@ -183,11 +280,13 @@ async function chat(req, res) {
     res.setHeader('Connection', 'keep-alive')
     res.flushHeaders()
 
+    // Send initial metadata about key usage
+    if (usingUserKey) {
+      res.write(`data: ${JSON.stringify({ type: 'metadata', usingUserKey: true, provider })}\n\n`)
+    }
+
     // Create tools for the AI agent
     const tools = createProjectTools(projectId, userId)
-
-    // Use model from request or fall back to settings/default
-    const selectedModel = model || Settings.ai?.model || 'anthropic/claude-sonnet-4-5'
 
     // Track parts in order for saving to database
     let allToolResults = []
@@ -196,7 +295,7 @@ async function chat(req, res) {
 
     // Stream the response using AI SDK with tools enabled
     const result = streamText({
-      model: selectedModel,
+      model: resolvedModel,
       system: SYSTEM_PROMPT,
       messages,
       tools,

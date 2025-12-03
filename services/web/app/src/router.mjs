@@ -37,6 +37,7 @@ import PasswordResetRouter from './Features/PasswordReset/PasswordResetRouter.mj
 import StaticPagesRouter from './Features/StaticPages/StaticPagesRouter.mjs'
 import ChatController from './Features/Chat/ChatController.mjs'
 import AiAssistantRouter from './Features/AiAssistant/AiAssistantRouter.mjs'
+import UserAiKeysRouter from './Features/AiAssistant/UserAiKeysRouter.mjs'
 import Modules from './infrastructure/Modules.mjs'
 import {
   RateLimiter,
@@ -347,6 +348,7 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
   TokenAccessRouter.apply(webRouter)
   HistoryRouter.apply(webRouter, privateApiRouter)
   AiAssistantRouter.apply(webRouter)
+  UserAiKeysRouter.apply(webRouter)
 
   await Modules.applyRouter(webRouter, privateApiRouter, publicApiRouter)
 

@@ -452,6 +452,9 @@ module.exports = {
     ? {
         model: process.env.AI_MODEL || 'openai/gpt-5-mini',
         apiKey: process.env.AI_GATEWAY_API_KEY,
+        // Secret used to encrypt user-provided API keys (BYOK feature)
+        // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+        keysEncryptionSecret: process.env.AI_KEYS_ENCRYPTION_SECRET,
       }
     : undefined,
   enableSubscriptions: process.env.ENABLE_SUBSCRIPTIONS === 'true',

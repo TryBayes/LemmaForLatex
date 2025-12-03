@@ -814,6 +814,24 @@
   color: var(--content-secondary);
 }
 
+.assistant-user-key-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--spacing-02);
+  padding: 2px 8px;
+  background-color: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4ade80;
+  
+  .material-symbols {
+    font-size: 12px;
+  }
+}
+
 // Limit reached styling
 .assistant-limit-reached {
   background: linear-gradient(135deg, #ff9800 0%, #f44336 100%) !important;

@@ -35,6 +35,8 @@ export const AssistantPane = () => {
     deleteConversation,
     showHistory,
     setShowHistory,
+    usingUserKey,
+    hasUserKeys,
   } = useAiAssistant()
 
   // Check if error is due to message limit
@@ -74,7 +76,16 @@ export const AssistantPane = () => {
             <div className="assistant-header-left">
               <MaterialIcon type="smart_toy" />
               <span className="assistant-header-title">AI Assistant</span>
-              {!hasPaidPlan && weeklyLimit > 0 && (
+              {usingUserKey && (
+                <span 
+                  className="assistant-user-key-badge" 
+                  title="Using your own API key"
+                >
+                  <MaterialIcon type="key" />
+                  Your Key
+                </span>
+              )}
+              {!hasPaidPlan && weeklyLimit > 0 && !usingUserKey && (
                 <span className="assistant-usage-badge" title="AI messages remaining this week">
                   {remaining}/{weeklyLimit}
                 </span>

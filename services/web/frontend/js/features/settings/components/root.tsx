@@ -1,5 +1,6 @@
 import SecuritySection from '@/features/settings/components/security-section'
 import SubscriptionSection from '@/features/settings/components/subscription-section'
+import AiKeysSection from '@/features/settings/components/ai-keys-section'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import getMeta from '../../../utils/meta'
@@ -67,6 +68,8 @@ function SettingsPageContent() {
           </OLRow>
           <hr />
           <SubscriptionSection />
+          <hr />
+          <AiKeysSection />
           <hr />
           <SecuritySection />
           <SplitTestProvider>
