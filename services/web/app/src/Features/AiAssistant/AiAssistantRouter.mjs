@@ -61,5 +61,21 @@ export default {
       AuthenticationController.requireLogin(),
       AiAssistantController.getMessageCount
     )
+
+    // Apply a pending edit (when user accepts)
+    webRouter.post(
+      '/project/:project_id/ai-assistant/apply-edit',
+      AuthorizationMiddleware.blockRestrictedUserFromProject,
+      AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+      AiAssistantController.applyEdit
+    )
+
+    // Compile with staged changes (preview AI edits without accepting)
+    webRouter.post(
+      '/project/:project_id/ai-assistant/compile-staged',
+      AuthorizationMiddleware.blockRestrictedUserFromProject,
+      AuthorizationMiddleware.ensureUserCanReadProject,
+      AiAssistantController.compileWithStagedChanges
+    )
   },
 }

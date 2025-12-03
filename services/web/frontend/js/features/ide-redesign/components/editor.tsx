@@ -9,6 +9,7 @@ import { Suspense } from 'react'
 import { FullSizeLoadingSpinner } from '@/shared/components/loading-spinner'
 import SymbolPalettePane from '@/features/ide-react/components/editor/symbol-palette-pane'
 import { useEditorPropertiesContext } from '@/features/ide-react/context/editor-properties-context'
+import { PendingEditsFloatingBar } from '@/features/ai-assistant/components/pending-edits-floating-bar'
 
 export const Editor = () => {
   const { opening, errorState, showSymbolPalette } =
@@ -41,6 +42,7 @@ export const Editor = () => {
         >
           <SourceEditor />
           {isLoading && <EditorLoadingPane />}
+          <PendingEditsFloatingBar />
         </Panel>
         {showSymbolPalette && (
           <>
