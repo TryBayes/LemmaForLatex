@@ -8,14 +8,43 @@ import {
   ToolResult,
   MessagePart,
   Conversation,
+  PendingEditResult,
 } from './use-ai-assistant'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import {
+  usePendingEditsContext,
+  PendingEdit,
+} from '@/features/ai-assistant/context/pending-edits-context'
+import { PendingEditCard } from '@/features/ai-assistant/components/pending-edits-panel'
 
 const Loading = () => <FullSizeLoadingSpinner delay={500} className="pt-4" />
 
-export const AssistantPane = () => {
+// Inner component that uses the pending edits context
+const AssistantPaneInner = () => {
+  const { addPendingEdit, hasPendingEdits } = usePendingEditsContext()
+
+  console.log('[AssistantPane] Rendering with hasPendingEdits:', hasPendingEdits)
+
+  // Handler for when AI returns a pending edit
+  const handlePendingEdit = useCallback(async (edit: PendingEditResult) => {
+    console.log('[AssistantPane] handlePendingEdit called with:', edit)
+    try {
+      await addPendingEdit({
+        filePath: edit.path,
+        docId: edit.docId,
+        oldContent: edit.oldContent,
+        newContent: edit.newContent,
+        startLine: edit.startLine,
+        endLine: edit.startLine + edit.linesChanged,
+      })
+      console.log('[AssistantPane] addPendingEdit completed successfully')
+    } catch (error) {
+      console.error('[AssistantPane] Error adding pending edit:', error)
+    }
+  }, [addPendingEdit])
+
   const {
     messages,
     isLoading,
@@ -35,7 +64,8 @@ export const AssistantPane = () => {
     deleteConversation,
     showHistory,
     setShowHistory,
-  } = useAiAssistant()
+    pendingEditsCount,
+  } = useAiAssistant({ onPendingEdit: handlePendingEdit })
 
   // Check if error is due to message limit
   const isLimitReached = error?.includes('[LIMIT_REACHED]')
@@ -320,16 +350,65 @@ function MessageParts({ parts }: { parts: MessagePart[] }) {
 }
 
 function ToolCallBubble({ results }: { results: ToolResult[] }) {
+  const { getEditByContent, acceptEdit, rejectEdit } = usePendingEditsContext()
+  
   return (
     <div className="assistant-tool-bubble">
-      {results.map((result, index) => (
-        <div key={index} className="assistant-tool-chip">
-          <MaterialIcon type={getToolIcon(result.toolName)} />
-          <span>{formatToolName(result.toolName)}</span>
-          <MaterialIcon type="check_circle" className="assistant-tool-check" />
-        </div>
-      ))}
+      {results.map((result, index) => {
+        // Check if this is a pending edit result
+        const isPendingEdit = result.toolName === 'edit_file' && 
+          result.result?.pending === true &&
+          result.result?.docId &&
+          result.result?.newContent
+
+        if (isPendingEdit) {
+          // Look up the edit from context
+          const edit = getEditByContent(result.result.docId, result.result.newContent)
+          
+          if (edit) {
+            return (
+              <ChatDiffCard 
+                key={index}
+                edit={edit}
+                onAccept={() => acceptEdit(edit.id)}
+                onReject={() => rejectEdit(edit.id)}
+              />
+            )
+          }
+        }
+
+        // Regular tool chip for non-edit tools
+        return (
+          <div key={index} className="assistant-tool-chip">
+            <MaterialIcon type={getToolIcon(result.toolName)} />
+            <span>{formatToolName(result.toolName)}</span>
+            <MaterialIcon type="check_circle" className="assistant-tool-check" />
+          </div>
+        )
+      })}
     </div>
+  )
+}
+
+// Diff card specifically for chat - shows accepted/rejected states inline
+function ChatDiffCard({ 
+  edit, 
+  onAccept, 
+  onReject 
+}: { 
+  edit: PendingEdit
+  onAccept: () => void
+  onReject: () => void
+}) {
+  return (
+    <PendingEditCard
+      editId={edit.id}
+      filePath={edit.filePath}
+      diff={edit.diff}
+      status={edit.status}
+      onAccept={onAccept}
+      onReject={onReject}
+    />
   )
 }
 
@@ -542,6 +621,11 @@ function Placeholder() {
       </div>
     </div>
   )
+}
+
+// AssistantPane - PendingEditsContext is now provided globally in react-context-root
+export const AssistantPane = () => {
+  return <AssistantPaneInner />
 }
 
 export default AssistantPane

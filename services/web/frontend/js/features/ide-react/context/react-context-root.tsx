@@ -31,6 +31,7 @@ import { UserSettingsProvider } from '@/shared/context/user-settings-context'
 import { CommandRegistryProvider } from './command-registry-context'
 import { NewEditorTourProvider } from '@/features/ide-redesign/contexts/new-editor-tour-context'
 import { EditorSelectionProvider } from '@/shared/context/editor-selection-context'
+import { PendingEditsProvider } from '@/features/ai-assistant/context/pending-edits-context'
 import importOverleafModules from '../../../../macros/import-overleaf-module.macro'
 
 const rootContextProviders = importOverleafModules('rootContextProviders') as {
@@ -76,6 +77,7 @@ export const ReactContextRoot: FC<
     UserFeaturesProvider,
     NewEditorTourProvider,
     EditorSelectionProvider,
+    PendingEditsProvider,
     ...providers,
   }
 
@@ -124,9 +126,11 @@ export const ReactContextRoot: FC<
                                                               <Providers.OutlineProvider>
                                                                 <Providers.CommandRegistryProvider>
                                                                   <Providers.EditorSelectionProvider>
-                                                                    {
-                                                                      childrenWrappedWithDynamicProviders
-                                                                    }
+                                                                    <Providers.PendingEditsProvider>
+                                                                      {
+                                                                        childrenWrappedWithDynamicProviders
+                                                                      }
+                                                                    </Providers.PendingEditsProvider>
                                                                   </Providers.EditorSelectionProvider>
                                                                 </Providers.CommandRegistryProvider>
                                                               </Providers.OutlineProvider>

@@ -55,6 +55,7 @@ import { trackDetachedComments } from './track-detached-comments'
 import { reviewTooltip } from './review-tooltip'
 import { tooltipsReposition } from './tooltips-reposition'
 import { selectionListener } from '@/features/source-editor/extensions/selection-listener'
+import { aiDiff } from './ai-diff'
 
 const moduleExtensions: Array<(options: Record<string, any>) => Extension> =
   importOverleafModules('sourceEditorExtensions').map(
@@ -149,6 +150,8 @@ export const createExtensions = (options: Record<string, any>): Extension[] => [
   // NOTE: `emptyLineFiller` needs to be before `trackChanges`,
   // so the decorations are added in the correct order.
   emptyLineFiller(),
+  // AI diff highlighting for pending edits from the AI assistant
+  aiDiff(),
   options.currentDoc.currentDocument.getType() === 'history-ot'
     ? historyOT(options.currentDoc.currentDocument)
     : ranges(),

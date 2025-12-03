@@ -4,6 +4,19 @@ import getMeta from '@/utils/meta'
 
 export type MessageRole = 'user' | 'assistant'
 
+// Interface for pending edit results from the AI
+export interface PendingEditResult {
+  success: boolean
+  pending: boolean
+  path: string
+  docId: string
+  oldContent: string
+  newContent: string
+  startLine: number
+  linesChanged: number
+  message: string
+}
+
 export interface Message {
   id: string
   content: string
@@ -60,7 +73,12 @@ export interface Conversation {
 
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5'
 
-export function useAiAssistant() {
+export interface UseAiAssistantOptions {
+  onPendingEdit?: (edit: PendingEditResult) => void
+}
+
+export function useAiAssistant(options: UseAiAssistantOptions = {}) {
+  const { onPendingEdit } = options
   const { projectId } = useProjectContext()
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -72,6 +90,7 @@ export function useAiAssistant() {
   const [hasPaidPlan, setHasPaidPlan] = useState<boolean>(false)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const [pendingEditsCount, setPendingEditsCount] = useState<number>(0)
   const [showHistory, setShowHistory] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const conversationsLoadedRef = useRef(false)
@@ -336,6 +355,36 @@ export function useAiAssistant() {
                             : msg
                         )
                       )
+                      
+                      // Check for pending edits in tool results
+                      for (const toolResult of event.data) {
+                        // Debug: log the full structure to see what properties are available
+                        console.log('[AI Assistant] Full tool result object:', JSON.stringify(toolResult, null, 2))
+                        
+                        // The AI SDK might store result in different properties
+                        // Check for 'result', 'output', or the result might be at the top level
+                        const result = toolResult.result ?? toolResult.output ?? toolResult
+                        
+                        console.log('[AI Assistant] Tool result received:', toolResult.toolName, 'result:', result)
+                        
+                        if (
+                          toolResult.toolName === 'edit_file' &&
+                          result &&
+                          typeof result === 'object' &&
+                          'pending' in result &&
+                          (result as PendingEditResult).pending === true
+                        ) {
+                          const editResult = result as PendingEditResult
+                          console.log('[AI Assistant] Pending edit detected:', editResult)
+                          if (onPendingEdit) {
+                            console.log('[AI Assistant] Calling onPendingEdit callback')
+                            onPendingEdit(editResult)
+                          } else {
+                            console.warn('[AI Assistant] onPendingEdit callback not provided!')
+                          }
+                          setPendingEditsCount(prev => prev + 1)
+                        }
+                      }
                     }
                     break
 
@@ -399,7 +448,7 @@ export function useAiAssistant() {
         setIsLoading(false)
       }
     },
-    [projectId, messages, selectedModel, currentConversationId, hasPaidPlan]
+    [projectId, messages, selectedModel, currentConversationId, hasPaidPlan, onPendingEdit]
   )
 
   const stopGeneration = useCallback(() => {
@@ -426,6 +475,7 @@ export function useAiAssistant() {
     loadConversation,
     startNewConversation,
     deleteConversation,
+    pendingEditsCount,
     showHistory,
     setShowHistory,
   }
