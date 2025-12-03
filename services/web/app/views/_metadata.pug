@@ -39,8 +39,8 @@ else if metadata && metadata.image_src
 	meta(name='image' content=metadata.image_src)
 else if settings.overleaf
 	//- the default image for Lemma
-	meta(itemprop='image' content=buildImgPath('ol-brand/overleaf_og_logo.png'))
-	meta(name='image' content=buildImgPath('ol-brand/overleaf_og_logo.png'))
+	meta(itemprop='image' content=buildImgPath('ol-brand/overleaf.svg'))
+	meta(name='image' content=buildImgPath('ol-brand/overleaf.svg'))
 else
 	//- the default image for Lemma Community Edition/Server Pro
 	meta(itemprop='image' content=buildBaseAssetPath() + 'apple-touch-icon.png')
@@ -75,7 +75,7 @@ else if settings.overleaf
 	//- the default image for Lemma
 	meta(
 		name='twitter:image'
-		content=buildImgPath('ol-brand/overleaf_og_logo.png')
+		content=buildImgPath('ol-brand/overleaf.svg')
 	)
 else
 	//- the default image for Lemma Community Edition/Server Pro
@@ -101,7 +101,7 @@ else if settings.overleaf
 	//- the default image for Lemma
 	meta(
 		property='og:image'
-		content=buildImgPath('ol-brand/overleaf_og_logo.png')
+		content=buildImgPath('ol-brand/overleaf.svg')
 	)
 else
 	//- the default image for Lemma Community Edition/Server Pro
