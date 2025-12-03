@@ -1,0 +1,603 @@
+// AI Diff Highlighting Styles
+// Used for showing pending AI edits in the editor
+
+// Pending edits indicator in the assistant panel
+.ai-pending-edits-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.15) 0%, rgba(46, 160, 67, 0.1) 100%);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 8px;
+  margin: 8px;
+  font-size: 13px;
+}
+
+.ai-pending-edits-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary, #c9d1d9);
+
+  .material-symbols {
+    color: #58a6ff;
+    font-size: 18px;
+  }
+}
+
+.ai-pending-edits-count {
+  font-weight: 600;
+  color: #58a6ff;
+}
+
+.ai-pending-edits-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-pending-accept-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background-color: #238636;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: #2ea043;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.ai-pending-reject-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background-color: transparent;
+  color: #f85149;
+  border: 1px solid #f85149;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: rgba(248, 81, 73, 0.15);
+  }
+}
+
+// Individual pending edit card in the chat
+.ai-pending-edit-card {
+  margin: 8px 0;
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg-dark-secondary, #161b22);
+  transition: all 0.2s ease;
+
+  // Accepted state
+  &.ai-status-accepted {
+    border-color: rgba(46, 160, 67, 0.4);
+    opacity: 0.85;
+
+    .ai-pending-edit-header {
+      background: linear-gradient(135deg, rgba(46, 160, 67, 0.15) 0%, rgba(46, 160, 67, 0.05) 100%);
+      border-bottom-color: rgba(46, 160, 67, 0.2);
+    }
+
+    .ai-pending-edit-diff {
+      opacity: 0.7;
+    }
+  }
+
+  // Rejected state - same as accepted but with red tint
+  &.ai-status-rejected {
+    border-color: rgba(248, 81, 73, 0.4);
+    opacity: 0.85;
+
+    .ai-pending-edit-header {
+      background: linear-gradient(135deg, rgba(248, 81, 73, 0.15) 0%, rgba(248, 81, 73, 0.05) 100%);
+      border-bottom-color: rgba(248, 81, 73, 0.2);
+    }
+
+    .ai-pending-edit-diff {
+      opacity: 0.7;
+    }
+  }
+}
+
+.ai-pending-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(88, 166, 255, 0.05) 100%);
+  border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+}
+
+.ai-pending-edit-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #58a6ff;
+  font-family: var(--font-mono, monospace);
+
+  .material-symbols {
+    font-size: 16px;
+  }
+}
+
+.ai-pending-edit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: rgba(88, 166, 255, 0.2);
+  color: #58a6ff;
+  font-weight: 500;
+
+  .material-symbols {
+    font-size: 14px;
+  }
+
+  &.ai-status-accepted {
+    background-color: rgba(46, 160, 67, 0.2);
+    color: #2ea043;
+  }
+
+  &.ai-status-rejected {
+    background-color: rgba(248, 81, 73, 0.2);
+    color: #f85149;
+  }
+}
+
+.ai-pending-edit-diff {
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-pending-edit-line {
+  padding: 2px 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+
+  &.insert {
+    background-color: rgba(46, 160, 67, 0.2);
+    border-left: 3px solid #2ea043;
+  }
+
+  &.delete {
+    background-color: rgba(248, 81, 73, 0.2);
+    border-left: 3px solid #f85149;
+    text-decoration: line-through;
+    opacity: 0.8;
+  }
+
+  &.unchanged {
+    color: var(--text-secondary, #8b949e);
+  }
+}
+
+.ai-pending-edit-line-number {
+  display: inline-block;
+  width: 30px;
+  text-align: right;
+  margin-right: 12px;
+  color: var(--text-tertiary, #6e7681);
+  user-select: none;
+}
+
+.ai-pending-edit-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--bg-dark-tertiary, #0d1117);
+}
+
+.ai-pending-edit-accept {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background-color: #238636;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: #2ea043;
+  }
+}
+
+.ai-pending-edit-reject {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background-color: transparent;
+  color: #f85149;
+  border: 1px solid #f85149;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: rgba(248, 81, 73, 0.15);
+  }
+}
+
+// Keyboard shortcut hints
+.ai-keyboard-hint {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 4px;
+  padding: 1px 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+// Diff stats summary
+.ai-diff-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-secondary, #8b949e);
+  padding: 4px 12px;
+  background-color: var(--bg-dark-tertiary, #0d1117);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-diff-stat-insert {
+  color: #2ea043;
+}
+
+.ai-diff-stat-delete {
+  color: #f85149;
+}
+
+// Loading state for applying edits
+.ai-pending-edit-applying {
+  opacity: 0.7;
+  pointer-events: none;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// Toast notification for edit applied
+.ai-edit-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  background-color: #238636;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: slideInUp 0.3s ease-out;
+  z-index: 10000;
+
+  &.rejected {
+    background-color: #6e7681;
+  }
+
+  .material-symbols {
+    font-size: 20px;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+// CodeMirror inline diff styles
+.ol-cm-ai-ghost-container {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.ol-cm-ai-ghost-line {
+  display: block;
+  background-color: rgba(248, 81, 73, 0.15);
+  border-left: 4px solid #f85149;
+  margin-left: -4px;
+  padding-left: 24px; /* Match editor indentation + prefix space */
+  color: #f85149;
+  text-decoration: line-through;
+  opacity: 0.7;
+  font-family: var(--source-font-family, monospace);
+  line-height: var(--source-line-height, 1.6);
+  position: relative;
+  white-space: pre;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none; /* Prevent clicking/cursor placement */
+  user-select: none; /* Optional: prevent selection */
+  
+  &::before {
+    content: '-';
+    position: absolute;
+    left: 8px;
+    font-weight: bold;
+    opacity: 0.7;
+  }
+}
+
+.ol-cm-ai-ghost-prefix {
+  display: none; /* Handled by ::before */
+}
+
+// CodeMirror insert line - matches diff card styling
+.ol-cm-ai-insert-line {
+  background-color: rgba(46, 160, 67, 0.15) !important;
+  border-left: 4px solid #2ea043 !important;
+  margin-left: -4px;
+  padding-left: 8px;
+  position: relative;
+  pointer-events: none; /* Prevent clicking/cursor placement */
+}
+
+// Floating actions container (Block widget)
+.ol-cm-ai-actions-block {
+  margin-left: -4px; /* Align with border */
+  padding: 8px;
+  background-color: rgba(46, 160, 67, 0.1); /* Subtle green tint extension */
+  border-left: 4px solid #2ea043;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  pointer-events: auto; /* Ensure buttons are clickable */
+}
+
+.ol-cm-ai-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+  vertical-align: middle;
+}
+
+.ol-cm-ai-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-family-sans, system-ui, sans-serif);
+  transition: all 0.15s ease;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.ol-cm-ai-accept-btn {
+  background-color: #238636;
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.1);
+  
+  &:hover {
+    background-color: #2ea043;
+  }
+}
+
+.ol-cm-ai-reject-btn {
+  background-color: #d73a49;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  
+  &:hover {
+    background-color: #cb2431;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.ol-cm-ai-shortcut {
+  margin-left: 4px;
+  opacity: 0.6;
+  font-size: 10px;
+  font-weight: normal;
+  padding: 1px 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+// Deleted content shown as a block above the inserted line
+.ol-cm-ai-deleted-content {
+  display: block;
+  background-color: rgba(248, 81, 73, 0.15);
+  border-left: 4px solid #f85149;
+  margin-left: -4px;
+  padding: 2px 8px 2px 24px;
+  position: relative;
+  margin-bottom: 0;
+  font-family: var(--source-font-family, monospace);
+  line-height: var(--source-line-height, 1.6);
+  
+  // Add "−" prefix like the diff card
+  &::before {
+    content: '−';
+    position: absolute;
+    left: 8px;
+    color: #f85149;
+    font-weight: bold;
+  }
+}
+
+.ol-cm-ai-deleted-text {
+  display: inline;
+  color: #f85149;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+// Floating bar at bottom of editor
+.ai-floating-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.ai-floating-bar-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.ai-floating-bar-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(30, 38, 50, 0.98) 0%, rgba(22, 27, 34, 0.98) 100%);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+}
+
+.ai-floating-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #c9d1d9);
+  font-size: 13px;
+  white-space: nowrap;
+
+  .material-symbols {
+    color: #58a6ff;
+    font-size: 20px;
+  }
+
+  strong {
+    color: #58a6ff;
+    font-weight: 600;
+  }
+}
+
+.ai-floating-bar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-floating-bar-accept {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
+
+  &:hover {
+    background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+    box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .material-symbols {
+    font-size: 18px;
+  }
+}
+
+.ai-floating-bar-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.5);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: rgba(248, 81, 73, 0.15);
+    border-color: #f85149;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .material-symbols {
+    font-size: 18px;
+  }
+}
+
